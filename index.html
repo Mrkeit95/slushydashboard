@@ -225,11 +225,50 @@ function getCurMonthLabel(){return MONTHS[currentMonth]+' '+currentYear}
 function getPrevMonthLabel(){return currentMonth>0?MONTHS[currentMonth-1]+' '+currentYear:MONTHS[11]+' '+(currentYear-1)}
 
 /* ─── Enrich ─── */
-function enrich(){D.forEach(c=>{c.avgTicket=c.sales>0?c.tot/c.sales:0;c.dailyAvg=c.tot/(c.st==="PTO"?10:26);c.momentum=c.f14>0?c.l15/c.f14:0;c.pctGoal=c.goal>0?(c.tot/c.goal*100):0})}
+function enrich(){
+  const dayOfMonth=new Date().getDate();
+  const daysInMonth=new Date(currentYear,currentMonth+1,0).getDate();
+  const monthPct=dayOfMonth/daysInMonth;
+  D.forEach(c=>{
+    c.avgTicket=c.sales>0?c.tot/c.sales:0;
+    c.dailyAvg=dayOfMonth>0?c.tot/dayOfMonth:0;
+    c.momentum=c.f14>0?c.l15/c.f14:0;
+    c.pctGoal=c.goal>0?(c.tot/(c.goal*monthPct)*100):0;
+    // Lifetime stats (populated by syncSalesRecord)
+    c.lifeAvgTicket=c.lifeCount>0?c.lifeSales/c.lifeCount:c.avgTicket;
+    c.lifeMonthlyAvg=c.monthsActive>0?c.lifeSales/c.monthsActive:c.tot;
+  })
+}
 enrich();
 
-function getTier(c){if(c.st==="PTO")return"watch";const activeList=D.filter(x=>x.st==="Active");if(!activeList.length)return"watch";const mx=Math.max(...activeList.map(x=>x.tot));const s=mx>0?(c.tot/mx)*30:0+(c.dailyAvg/400)*20+(Math.min(c.momentum,2)/2)*15+((c.daily||[]).filter(v=>v>0).length/6)*10+(c.avgTicket/70)*25;return s>=65?"star":s>=45?"solid":s>=28?"watch":"critical"}
-function getAct(c){const t=getTier(c);if(c.st==="PTO")return{l:"PTO",cl:"var(--d)",u:10,d:"Inactive",y:"info"};if(t==="critical"&&(c.momentum<0.6||c.avgTicket<20))return{l:"TERMINATE",cl:"var(--rd)",u:0,d:c.avgTicket<20?"Sub-$20 ticket. No upselling skill.":"Under 60% momentum. Not recoverable.",y:"terminate"};if(t==="critical")return{l:"Final Warning",cl:"var(--or)",u:1,d:"Must improve this cycle.",y:"warning"};if(t==="watch"&&c.momentum<0.7)return{l:"Reassign",cl:"var(--am)",u:2,d:"Declining. Move to lower page.",y:"reassign"};if(t==="watch"&&c.avgTicket<25)return{l:"Coach",cl:"var(--am)",u:3,d:"Needs upselling training.",y:"coach"};if(t==="watch")return{l:"Monitor",cl:"var(--am)",u:3,d:"Weekly check-ins.",y:"monitor"};if(t==="solid"&&c.momentum>1.2)return{l:"Promote",cl:"var(--tl)",u:5,d:"Ready for higher tier.",y:"promote"};if(t==="star")return{l:"★ Star",cl:"var(--gn)",u:6,d:"Protect.",y:"star"};return{l:"Maintain",cl:"var(--d)",u:4,d:"On track.",y:"maintain"}}
+function getTier(c){
+  if(c.st==="PTO")return"watch";
+  const ls=c.lifeSales||0;const lc=c.lifeCount||0;const ma=c.monthsActive||1;
+  const lat=lc>0?ls/lc:c.avgTicket;
+  const lma=ls/ma;
+  // Score based on lifetime: avg monthly revenue (40%), avg ticket (30%), current month pace (20%), consistency (10%)
+  const mxMonthly=Math.max(...D.filter(x=>x.st==="Active").map(x=>x.lifeMonthlyAvg||x.tot),1);
+  const s1=mxMonthly>0?Math.min((lma/mxMonthly)*40,40):0;
+  const s2=Math.min((lat/60)*30,30);
+  const s3=Math.min((c.pctGoal/100)*20,20);
+  const s4=Math.min((ma/5)*10,10);
+  const s=s1+s2+s3+s4;
+  return s>=65?"star":s>=45?"solid":s>=28?"watch":"critical"
+}
+function getAct(c){
+  const t=getTier(c);
+  const ls=c.lifeSales||0;const ma=c.monthsActive||1;const lat=c.lifeAvgTicket||c.avgTicket;
+  const lma=ls/ma;
+  if(c.st==="PTO")return{l:"PTO",cl:"var(--d)",u:10,d:"Inactive",y:"info"};
+  if(t==="critical"&&ma>=3&&lma<2000&&lat<20)return{l:"TERMINATE",cl:"var(--rd)",u:0,d:"Lifetime avg $"+Math.round(lma)+"/mo, $"+lat.toFixed(0)+" ticket across "+ma+" months.",y:"terminate"};
+  if(t==="critical"&&ma>=2&&lma<1500)return{l:"Final Warning",cl:"var(--or)",u:1,d:"Lifetime avg $"+Math.round(lma)+"/mo over "+ma+" months. Must improve.",y:"warning"};
+  if(t==="critical")return{l:"Monitor",cl:"var(--am)",u:3,d:ma<2?"New chatter ("+ma+" months). Needs time.":"Below targets. Review needed.",y:"monitor"};
+  if(t==="watch"&&lat<25)return{l:"Coach",cl:"var(--am)",u:3,d:"Lifetime ticket $"+lat.toFixed(0)+". Needs upselling training.",y:"coach"};
+  if(t==="watch")return{l:"Monitor",cl:"var(--am)",u:3,d:"Lifetime $"+Math.round(lma)+"/mo. Weekly check-ins.",y:"monitor"};
+  if(t==="solid"&&c.pctGoal>120)return{l:"Promote",cl:"var(--tl)",u:5,d:"Exceeding goals. Ready for higher tier.",y:"promote"};
+  if(t==="star")return{l:"★ Star",cl:"var(--gn)",u:6,d:"Lifetime $"+fK(ls)+" across "+ma+" months. Protect.",y:"star"};
+  return{l:"Maintain",cl:"var(--d)",u:4,d:"On track. Lifetime avg $"+Math.round(lma)+"/mo.",y:"maintain"}
+}
 function fmt(n){return"$"+n.toLocaleString("en-US",{minimumFractionDigits:2,maximumFractionDigits:2})}
 function fK(n){return n>=1000?"$"+(n/1000).toFixed(1)+"k":fmt(n)}
 function fI(n){return"$"+Math.round(n).toLocaleString()}
@@ -1205,6 +1244,65 @@ async function syncPrevMonth(){
 }
 
 /* ── Sync chatter data from old sheet ── */
+var LIFE_DATA={}; // {chatterName: {sales: total, count: total, months: Set}}
+
+async function syncSalesRecord(){
+  try{
+    const url=SALES_SHEET_BASE+encodeURIComponent('Sales Record');
+    const resp=await fetch(url);
+    if(!resp.ok)return false;
+    const csv=await resp.text();
+    const rows=parseCSV(csv);
+    
+    // Find header
+    let hdr=-1;
+    for(let i=0;i<Math.min(rows.length,5);i++){
+      if(rows[i].some(c=>c==='Chatter Name'||c==='Net Sales')){hdr=i;break}
+    }
+    if(hdr<0)return false;
+    
+    const h=rows[hdr];
+    const iName=h.findIndex(c=>c==='Chatter Name');
+    const iNet=h.findIndex(c=>c==='Net Sales');
+    const iMonth=h.findIndex(c=>c.includes('Month Value'));
+    
+    if(iName<0||iNet<0)return false;
+    
+    LIFE_DATA={};
+    for(let i=hdr+1;i<rows.length;i++){
+      const r=rows[i];
+      const name=(r[iName]||'').trim();
+      if(!name||name.length<2)continue;
+      const net=parseNum(r[iNet]);
+      const month=iMonth>=0?(r[iMonth]||'').trim():'';
+      
+      if(!LIFE_DATA[name])LIFE_DATA[name]={sales:0,count:0,months:{}};
+      LIFE_DATA[name].sales+=net;
+      LIFE_DATA[name].count++;
+      if(month)LIFE_DATA[name].months[month]=true;
+    }
+    
+    // Apply to chatters
+    D.forEach(c=>{
+      const ld=LIFE_DATA[c.n];
+      if(ld){
+        c.lifeSales=ld.sales;
+        c.lifeCount=ld.count;
+        c.monthsActive=Object.keys(ld.months).length||1;
+      }else{
+        c.lifeSales=c.tot;
+        c.lifeCount=c.sales;
+        c.monthsActive=1;
+      }
+    });
+    
+    enrich();
+    console.log('[Slushy] Sales Record: '+Object.keys(LIFE_DATA).length+' chatters with lifetime data');
+    return true;
+  }catch(e){console.log('Sales Record sync error:',e.message);return false}
+}
+
+/* ── Sync chatter current month from old sheet ── */
 async function syncChatterData(){
   try{
     const url=CHATTER_SHEET_BASE+encodeURIComponent('Chatter Net Sales (Payroll)');
@@ -1270,7 +1368,8 @@ async function doSync(){
     const results=await Promise.allSettled([
       syncSalesData(),
       syncChatterData(),
-      syncPrevMonth()
+      syncPrevMonth(),
+      syncSalesRecord()
     ]);
     
     const anyOk=results.some(r=>r.status==='fulfilled'&&r.value===true);
