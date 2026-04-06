@@ -1075,21 +1075,6 @@ async function syncSalesData(){
       }
     }
     console.log('[Slushy] Summary: Running=$'+ME.mr+' Goal=$'+ME.mg+' Proj=$'+ME.mp);
-    
-    // Fallback: if summary stats still zero, calculate from daily data
-    if(ME.mr===0&&MD.length>0){
-      ME.mr=MD.reduce((s,d)=>s+d.s,0);
-      console.log('[Slushy] Fallback running from daily totals: $'+ME.mr);
-    }
-    const daysWithData=MD.filter(d=>d.s>0).length;
-    if(ME.mp===0&&daysWithData>0){
-      const daysInMonth=new Date(currentYear,currentMonth+1,0).getDate();
-      ME.mp=(ME.mr/daysWithData)*daysInMonth;
-    }
-    if(ME.dg===0&&ME.mg>0){
-      const daysInMonth=new Date(currentYear,currentMonth+1,0).getDate();
-      ME.dg=ME.mg/daysInMonth;
-    }
 
     // Parse daily totals from row 5 (index 4) - "Daily Sales" row
     // Daily values start after the labels, around col 19
@@ -1126,6 +1111,20 @@ async function syncSalesData(){
       const yestEntry=MD.find(x=>x.d===todayDay-1);
       if(todayEntry)ME.td=todayEntry.s;
       if(yestEntry)ME.yd=yestEntry.s;
+    }
+
+    // Fallback: if summary stats still zero, calculate from daily data
+    if(ME.mr===0&&MD.length>0){
+      ME.mr=MD.reduce((s,d)=>s+d.s,0);
+      console.log('[Slushy] Fallback running from daily totals: $'+ME.mr);
+    }
+    if(ME.mp===0){
+      const dwData=MD.filter(d=>d.s>0).length;
+      if(dwData>0){const dim=new Date(currentYear,currentMonth+1,0).getDate();ME.mp=(ME.mr/dwData)*dim}
+    }
+    if(ME.dg===0&&ME.mg>0){
+      const dim=new Date(currentYear,currentMonth+1,0).getDate();
+      ME.dg=ME.mg/dim;
     }
 
     // Parse model/creator data from row 7 onwards (index 6 = header, 7+ = data)
