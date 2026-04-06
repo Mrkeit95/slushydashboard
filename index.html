@@ -495,7 +495,7 @@ function render(){
     <select class="fsel" onchange="crFilter=this.value;render()"><option value="all">All Teams</option>${["Team 1","Team 2","Team 3","Team 4","Team 5","Team 6","Team 7"].map(t=>`<option value="${t}" ${crFilter===t?"selected":""}>${t}</option>`).join('')}</select>
     <span style="font-size:11px;color:var(--d);margin-left:auto">${crList.length} creators · Click team name for full breakdown</span></div>
     <div class="tw"><table><thead><tr><th>#</th><th>Model</th><th>Team</th><th class="s" onclick="doSort('sales')">Running Sales</th><th>Projections</th><th>MoM%</th><th>Sales</th><th>Follows</th><th>Type</th></tr></thead><tbody>
-      ${crList.sort((a,b)=>b.sales-a.sales).map((c,i)=>{const momCol=c.mom>0?'var(--gn)':c.mom<0?'var(--rd)':'var(--m)';return`<tr onclick="openTeam('\${c.t}')"><td style="font-family:var(--mn);color:var(--d);font-size:10px">\${i+1}</td><td style="font-weight:600">\${c.n}</td><td><span style="color:\${TC[c.t]||'var(--d)'};font-weight:600">\${c.t||'—'}</span></td><td style="font-family:var(--mn);font-weight:700">\${fmt(c.sales)}</td><td style="font-family:var(--mn);font-size:11px">\${fmt(c.proj)}</td><td style="font-family:var(--mn);font-size:11px;color:\${momCol}">\${(c.mom*100).toFixed(1)}%</td><td style="font-family:var(--mn);font-size:11px">\${c.count}</td><td style="font-family:var(--mn);font-size:11px">\${c.follows.toLocaleString()}</td><td><span class="badge b-\${c.accType==='FULL'?'star':'watch'}">\${c.accType||'—'}</span></td></tr>`}).join('')}
+      ${crList.sort((a,b)=>b.sales-a.sales).map((c,i)=>{const momCol=c.mom>0?'var(--gn)':c.mom<0?'var(--rd)':'var(--m)';return`<tr onclick="openTeam('${c.t}')"><td style="font-family:var(--mn);color:var(--d);font-size:10px">${i+1}</td><td style="font-weight:600">${c.n}</td><td><span style="color:${TC[c.t]||'var(--d)'};font-weight:600">${c.t||'—'}</span></td><td style="font-family:var(--mn);font-weight:700">${fmt(c.sales)}</td><td style="font-family:var(--mn);font-size:11px">${fmt(c.proj)}</td><td style="font-family:var(--mn);font-size:11px;color:${momCol}">${(c.mom*100).toFixed(1)}%</td><td style="font-family:var(--mn);font-size:11px">${c.count}</td><td style="font-family:var(--mn);font-size:11px">${c.follows.toLocaleString()}</td><td><span class="badge b-${c.accType==='FULL'?'star':'watch'}">${c.accType||'—'}</span></td></tr>`}).join('')}
     </tbody></table></div>
   `;
 
@@ -1012,23 +1012,24 @@ async function syncSalesData(){
     const rows=parseCSV(csv);
     if(rows.length<8)return false;
 
-    // Parse summary stats (rows 1-6 in sheet = rows 1-5 in CSV after header offset)
-    // The structure: col 9=label, col 11=value, col 13=label2, col 14=value2
+    // Parse summary stats - find label then grab next non-empty numeric value
+    function findValAfter(r,j){for(let k=j+1;k<Math.min(r.length,j+5);k++){const v=parseNum(r[k]);if(v>0)return v;} return 0}
     for(let i=0;i<Math.min(rows.length,7);i++){
       const r=rows[i];
       for(let j=0;j<r.length;j++){
-        const v=r[j];
-        if(v==='Total Active Pages'&&r[j+2])ME.activePages=parseNum(r[j+2]);
-        if(v==='Running Sales'&&r[j+2])ME.mr=parseNum(r[j+2]);
-        if(v==='Monthly Projections'&&r[j+2])ME.mp=parseNum(r[j+2]);
-        if(v==='Monthly Goal'&&r[j+2])ME.mg=parseNum(r[j+2]);
-        if(v==='Total Sale Count'&&r[j+2])ME.sc=parseNum(r[j+2]);
-        if(v==='Total Follows')ME.totalFollows=parseNum(r[j+1]);
-        if(v==='Total Visits')ME.totalVisits=parseNum(r[j+1]);
-        if(v==='Daily Sales Average')ME.dp=parseNum(r[j+1]);
-        if(v==='Daily Goal')ME.dg=parseNum(r[j+1]);
+        const v=(r[j]||'').trim();
+        if(v==='Total Active Pages')ME.activePages=findValAfter(r,j);
+        if(v==='Running Sales')ME.mr=findValAfter(r,j);
+        if(v==='Monthly Projections')ME.mp=findValAfter(r,j);
+        if(v==='Monthly Goal')ME.mg=findValAfter(r,j);
+        if(v==='Total Sale Count')ME.sc=findValAfter(r,j);
+        if(v==='Total Follows')ME.totalFollows=findValAfter(r,j);
+        if(v==='Total Visits')ME.totalVisits=findValAfter(r,j);
+        if(v==='Daily Sales Average'||v==='Daily Sales Averag')ME.dp=findValAfter(r,j);
+        if(v==='Daily Goal')ME.dg=findValAfter(r,j);
       }
     }
+    console.log('[Slushy] Summary: Running=$'+ME.mr+' Goal=$'+ME.mg+' Proj=$'+ME.mp);
 
     // Parse daily totals from row 5 (index 4) - "Daily Sales" row
     // Daily values start after the labels, around col 19
