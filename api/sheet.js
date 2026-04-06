@@ -2,6 +2,7 @@ export default async function handler(req, res) {
   const SHEETS = {
     chatstars: "1kUqGtf_Oc8HNOai1U8ZXey0oKw7Oj36R0RJNdFCSkn8",
     slushy: "1RWIYfuSKC8hb6DvVoDx3cw0gtLNL68uOYcMUpDvg-pM",
+    slushysales: "1y5CsqloQSm-8szr8GXpPZUa1fXN6gukwFdlFWYSOhL8",
   };
   const url = new URL(req.url, `http://${req.headers.host}`);
   const sid = url.searchParams.get("sid") || "slushy";
