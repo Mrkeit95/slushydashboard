@@ -1,0 +1,1260 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Slushy Dashboard</title>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{--bg:#110A0A;--s1:rgba(255,255,255,0.025);--s2:rgba(255,255,255,0.04);--b1:rgba(255,255,255,0.05);--b2:rgba(255,255,255,0.08);--t:#F0E6E0;--m:#8899AA;--d:#6B7A8A;--f:#4A5568;--pk:#FF3CAC;--or:#FF6B35;--mg:#E91E8C;--gn:#00E59B;--tl:#4ECDC4;--am:#FFB347;--rd:#FF3B5C;--pu:#A78BFA;--bl:#60A5FA;--ro:#F472B6;--ff:'Outfit',sans-serif;--mn:'JetBrains Mono',monospace}
+body{background:var(--bg);color:var(--t);font-family:var(--ff);min-height:100vh}
+.glow{position:fixed;inset:0;background:radial-gradient(ellipse at 15% 0%,rgba(255,60,172,0.05) 0%,transparent 50%),radial-gradient(ellipse at 85% 100%,rgba(255,107,53,0.03) 0%,transparent 50%);pointer-events:none;z-index:0}
+#loginScreen{position:fixed;inset:0;z-index:999;background:var(--bg);display:flex;align-items:center;justify-content:center;flex-direction:column}
+.login-box{background:var(--s1);border:1px solid var(--b1);border-radius:20px;padding:40px;width:380px;max-width:90vw;text-align:center}
+.login-box h2{font-size:22px;margin-bottom:6px;background:linear-gradient(135deg,var(--or),var(--pk));-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.login-box p{font-size:12px;color:var(--d);margin-bottom:24px}
+.li{width:100%;background:var(--s2);border:1px solid var(--b2);border-radius:10px;padding:12px 16px;color:var(--t);font-family:var(--ff);font-size:14px;outline:none;margin-bottom:12px;text-align:center}.li:focus{border-color:var(--pk)}.li::placeholder{color:var(--f)}
+.lb{width:100%;padding:12px;border:none;border-radius:10px;background:linear-gradient(135deg,var(--or),var(--pk));color:#fff;font-family:var(--ff);font-size:14px;font-weight:700;cursor:pointer;margin-top:4px}.lb:hover{filter:brightness(1.1)}
+.le{color:var(--rd);font-size:12px;margin-top:8px;min-height:18px}
+.wrap{position:relative;z-index:1;max-width:1500px;margin:0 auto;padding:0 28px 40px}
+.hdr{display:flex;align-items:center;justify-content:space-between;padding:14px 0;border-bottom:1px solid var(--b1);flex-wrap:wrap;gap:10px}
+.logo{display:flex;align-items:center;gap:10px}
+.logo-t{font-size:18px;font-weight:700;background:linear-gradient(135deg,var(--or),var(--pk));-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.hr{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.up{display:flex;align-items:center;gap:8px;padding:6px 14px;border-radius:10px;background:var(--s2);border:1px solid var(--b1);font-size:12px}
+.un{font-weight:600}.ur{font-size:9px;color:var(--d);text-transform:uppercase;letter-spacing:1px}
+.lo{background:none;border:1px solid var(--b2);border-radius:8px;color:var(--d);font-size:11px;padding:5px 12px;cursor:pointer;font-family:var(--ff)}.lo:hover{color:var(--rd);border-color:var(--rd)}
+.tabs{display:flex;gap:2px;background:rgba(255,255,255,0.03);border-radius:10px;padding:3px;flex-wrap:wrap}
+.tb{padding:7px 14px;border-radius:8px;border:none;cursor:pointer;font-size:11px;font-weight:600;font-family:var(--ff);background:transparent;color:var(--d);transition:all .2s;white-space:nowrap;position:relative}
+.tb.on{background:linear-gradient(135deg,var(--or),var(--pk));color:#fff}.tb:hover:not(.on){color:var(--t)}
+.tb .nf{position:absolute;top:-3px;right:-3px;width:16px;height:16px;border-radius:50%;background:var(--rd);color:#fff;font-size:8px;font-weight:700;display:flex;align-items:center;justify-content:center}
+.ld{width:8px;height:8px;border-radius:50%;background:var(--gn);display:inline-block;animation:pls 2s infinite}
+@keyframes pls{0%,100%{opacity:1}50%{opacity:.3}}
+.card{background:var(--s1);border:1px solid var(--b1);border-radius:16px}
+.lbl{font-size:10px;font-weight:600;color:var(--d);letter-spacing:1.5px;text-transform:uppercase}
+.kg{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px;margin-bottom:24px}
+.kpi{padding:16px 18px;cursor:pointer;transition:border-color .2s}.kpi:hover{border-color:var(--b2)}
+.kv{font-size:22px;font-weight:700;font-family:var(--mn);margin-top:5px;line-height:1}.ks{font-size:10px;color:var(--d);margin-top:5px}
+.tw{overflow-x:auto;border-radius:14px;border:1px solid var(--b1)}
+table{width:100%;border-collapse:collapse;font-size:12px}
+thead th{padding:9px 8px;text-align:left;font-size:9px;font-weight:600;color:var(--d);letter-spacing:1px;text-transform:uppercase;background:rgba(255,255,255,0.015);white-space:nowrap;user-select:none}
+th.s{cursor:pointer}th.s:hover{color:var(--t)}
+tbody tr{border-bottom:1px solid rgba(255,255,255,0.03);transition:background .15s;cursor:pointer}
+tbody tr:hover{background:rgba(255,255,255,0.02)}
+td{padding:9px 8px;white-space:nowrap}
+.badge{padding:3px 7px;border-radius:5px;font-size:9px;font-weight:700;letter-spacing:.5px;white-space:nowrap;display:inline-block}
+.b-star{background:rgba(0,229,155,0.1);border:1px solid rgba(0,229,155,0.2);color:var(--gn)}
+.b-solid{background:rgba(78,205,196,0.1);border:1px solid rgba(78,205,196,0.2);color:var(--tl)}
+.b-watch{background:rgba(255,179,71,0.1);border:1px solid rgba(255,179,71,0.2);color:var(--am)}
+.b-critical{background:rgba(255,59,92,0.1);border:1px solid rgba(255,59,92,0.2);color:var(--rd)}
+.ab{padding:3px 7px;border-radius:5px;font-size:9px;font-weight:600;white-space:nowrap;display:inline-block}
+.fsel{background:var(--s2);border:1px solid var(--b2);border-radius:8px;padding:5px 10px;color:var(--t);font-size:11px;font-family:var(--ff);cursor:pointer;outline:none}.fsel option{background:#1a1010}
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+@media(max-width:900px){.g2{grid-template-columns:1fr!important}.kg{grid-template-columns:repeat(2,1fr)}}
+.tc{display:none;padding-top:24px}.tc.on{display:block}
+/* Panel */
+.ov{position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:100;opacity:0;pointer-events:none;transition:opacity .3s}.ov.open{opacity:1;pointer-events:all}
+.pnl{position:fixed;top:0;right:-640px;width:640px;max-width:100vw;height:100vh;background:#1a0f0f;border-left:1px solid var(--b2);z-index:101;transition:right .3s ease;overflow-y:auto}.pnl.open{right:0}
+.ph{position:sticky;top:0;z-index:5;background:#1a0f0f;padding:18px 24px;border-bottom:1px solid var(--b1);display:flex;justify-content:space-between;align-items:center}
+.px{background:none;border:1px solid var(--b2);border-radius:8px;color:var(--m);font-size:18px;width:36px;height:36px;cursor:pointer;display:flex;align-items:center;justify-content:center}.px:hover{background:var(--s2);color:var(--t)}
+.pb{padding:24px}
+.pg{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.ps{padding:12px;border-radius:10px;background:var(--s1);border:1px solid var(--b1)}.ps .dl{font-size:9px;color:var(--d);margin-bottom:2px}.ps .dv{font-size:14px;font-weight:700;font-family:var(--mn)}
+.abtn{padding:10px 18px;border-radius:10px;border:none;cursor:pointer;font-family:var(--ff);font-size:12px;font-weight:600;transition:all .2s;display:inline-flex;align-items:center;gap:6px}.abtn:hover{transform:translateY(-1px);filter:brightness(1.1)}
+.a-fire{background:rgba(255,59,92,0.15);color:var(--rd);border:1px solid rgba(255,59,92,0.3)}
+.a-replace{background:rgba(255,60,172,0.15);color:var(--pk);border:1px solid rgba(255,60,172,0.3)}
+.a-coach{background:rgba(78,205,196,0.15);color:var(--tl);border:1px solid rgba(78,205,196,0.3)}
+.a-note{background:rgba(255,179,71,0.15);color:var(--am);border:1px solid rgba(255,179,71,0.3)}
+.a-move{background:rgba(0,229,155,0.15);color:var(--gn);border:1px solid rgba(0,229,155,0.3)}
+.na{width:100%;background:var(--s2);border:1px solid var(--b2);border-radius:10px;color:var(--t);font-family:var(--ff);font-size:12px;padding:12px;resize:vertical;min-height:70px;outline:none;margin-top:8px}.na:focus{border-color:var(--pk)}
+.ns{margin-top:8px;padding:7px 14px;border-radius:8px;border:1px solid var(--b2);background:var(--s2);color:var(--t);font-size:11px;font-weight:600;font-family:var(--ff);cursor:pointer}.ns:hover{background:var(--pk);border-color:var(--pk);color:#fff}
+.si{display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border-radius:4px;font-size:9px;font-weight:600}
+.si-p{background:rgba(255,179,71,0.1);color:var(--am)}.si-a{background:rgba(0,229,155,0.1);color:var(--gn)}.si-r{background:rgba(255,59,92,0.1);color:var(--rd)}
+.tc-c{position:fixed;top:20px;right:20px;z-index:200;display:flex;flex-direction:column;gap:8px}
+.tst{padding:12px 20px;border-radius:10px;font-size:13px;font-weight:600;font-family:var(--ff);animation:sli .3s ease,fdo .3s ease 2.7s;opacity:0;animation-fill-mode:forwards}
+@keyframes sli{from{transform:translateX(100px);opacity:0}to{transform:translateX(0);opacity:1}}
+@keyframes fdo{to{opacity:0}}
+.tst-ok{background:rgba(0,229,155,0.15);border:1px solid rgba(0,229,155,0.3);color:var(--gn)}
+.heatcell{padding:5px 3px;text-align:center;font-size:9px;font-family:var(--mn)}
+.cc{padding:16px;cursor:pointer;transition:all .2s;position:relative;overflow:hidden}.cc:hover{border-color:var(--b2);transform:translateY(-2px)}
+.sd{width:10px;height:10px;border-radius:50%;display:inline-block;border:2px solid}.sc{border-color:var(--gn);background:var(--gn)}.sg{border-color:var(--rd);background:transparent}
+.del-btn{background:none;border:none;color:var(--f);font-size:14px;cursor:pointer;padding:4px;border-radius:4px;opacity:0;transition:all .2s}.del-btn:hover{color:var(--rd)}.saved-note:hover .del-btn,.task-card:hover .del-btn{opacity:1}
+.alert-bar{padding:12px 20px;border-radius:12px;margin-top:12px;display:flex;align-items:center;gap:12px;cursor:pointer}.alert-bar:hover{transform:translateY(-1px)}
+.ap{width:10px;height:10px;border-radius:50%;flex-shrink:0;animation:pls 1.5s infinite}
+.task-card{padding:14px 18px;border-radius:12px;background:var(--s1);border:1px solid var(--b1);margin-bottom:10px}
+.task-check{width:20px;height:20px;border-radius:6px;border:2px solid var(--b2);cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0}.task-check.checked{background:var(--gn);border-color:var(--gn)}.task-check:hover{border-color:var(--pk)}
+</style>
+</head>
+<body>
+<div id="loginScreen"><div class="glow"></div>
+<div style="margin-bottom:24px;text-align:center"><svg width="50" height="50" viewBox="0 0 100 100" fill="none"><defs><linearGradient id="slg" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#FF6B35"/><stop offset="50%" stop-color="#FF3CAC"/><stop offset="100%" stop-color="#E91E8C"/></linearGradient></defs><path d="M50 5 L61 35 L95 35 L68 55 L78 90 L50 70 L22 90 L32 55 L5 35 L39 35 Z" fill="url(#slg)"/><path d="M38 48 Q50 38 62 48 Q62 62 50 70 Q38 62 38 48Z" fill="#110A0A"/></svg></div>
+<div class="login-box" id="loginForm"><h2>Slushy Dashboard</h2><p>Operations Command Center</p><input class="li" id="lN" placeholder="Name" onkeydown="if(event.key==='Enter')doLogin()"><input class="li" id="lP" type="password" placeholder="Password" onkeydown="if(event.key==='Enter')doLogin()"><button class="lb" onclick="doLogin()">Sign In</button><div class="le" id="lE"></div></div></div>
+
+<div id="app" style="display:none"><div class="glow"></div><div class="wrap">
+<div class="hdr"><div class="logo"><svg width="30" height="30" viewBox="0 0 100 100" fill="none"><defs><linearGradient id="sg" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#FF6B35"/><stop offset="50%" stop-color="#FF3CAC"/><stop offset="100%" stop-color="#E91E8C"/></linearGradient></defs><path d="M50 5 L61 35 L95 35 L68 55 L78 90 L50 70 L22 90 L32 55 L5 35 L39 35 Z" fill="url(#sg)"/><path d="M38 48 Q50 38 62 48 Q62 62 50 70 Q38 62 38 48Z" fill="#110A0A"/></svg><span class="logo-t">Slushy Dashboard</span><span id="lS" style="display:flex;align-items:center;gap:6px;margin-left:12px;font-size:10px;color:var(--d)"><span class="ld"></span>Live</span></div><div class="hr"><div class="tabs" id="tbar"></div><div class="up" id="uP"></div><button class="lo" onclick="doLogout()">Sign Out</button></div></div>
+<div id="alerts"></div>
+<div id="t-overview" class="tc on"></div><div id="t-creators" class="tc"></div><div id="t-chatters" class="tc"></div><div id="t-pricing" class="tc"></div><div id="t-actions" class="tc"></div><div id="t-optimize" class="tc"></div><div id="t-tasks" class="tc"></div><div id="t-heatmap" class="tc"></div><div id="t-settings" class="tc"></div>
+</div></div>
+<div class="ov" id="ov" onclick="closeP()"></div>
+<div class="pnl" id="pnl"><div class="ph"><div id="pT" style="font-weight:700;font-size:16px"></div><button class="px" onclick="closeP()">✕</button></div><div class="pb" id="pB"></div></div>
+<div class="tc-c" id="toasts"></div>
+
+<script>
+/* Auto-clear old version data */
+try{['slushy_actions','slushy_v4','slushy_v5','sv7','st7','su7'].forEach(k=>{
+  const v=localStorage.getItem(k);
+  if(v&&k!=='slushy_users'&&k!=='sv7'&&k!=='st7'&&k!=='su7')localStorage.removeItem(k);
+})}catch(e){}
+/* ═══ AUTH + USER DB ═══ */
+const DEFAULT_USERS={"keit":{n:"Keit",p:"slushy2026",r:"admin"},"zein":{n:"Zein",p:"slushy2026",r:"admin"},"alex":{n:"Alex",p:"slushy2026",r:"admin"},"corn":{n:"Corn",p:"slushy2026",r:"admin"},"angelica":{n:"Angelica",p:"slushy2026",r:"admin"},"maria":{n:"Maria",p:"manager123",r:"manager"},"juan":{n:"Juan",p:"manager123",r:"manager"},"carlos":{n:"Carlos",p:"manager123",r:"manager"},"diana":{n:"Diana",p:"manager123",r:"manager"},"paolo":{n:"Paolo",p:"manager123",r:"manager"}};
+function getUserDB(){try{const d=JSON.parse(localStorage.getItem('slushy_users'));if(d&&Object.keys(d).length>0)return d}catch(e){}localStorage.setItem('slushy_users',JSON.stringify(DEFAULT_USERS));return{...DEFAULT_USERS}}
+function saveUserDB(db){localStorage.setItem('slushy_users',JSON.stringify(db))}
+let U=null;
+var twoFAStep=false;var pendingUser=null;
+
+function doLogin(){
+  const db=getUserDB();
+  if(twoFAStep&&pendingUser){
+    const code=document.getElementById('l2FA').value.trim();
+    const u=db[pendingUser];
+    if(u&&u.pin&&code===u.pin){U={...u,k:pendingUser};localStorage.setItem('su7',JSON.stringify(U));twoFAStep=false;pendingUser=null;showApp();return}
+    document.getElementById('lE').textContent="Invalid 2FA code";return;
+  }
+  const n=document.getElementById('lN').value.trim().toLowerCase(),p=document.getElementById('lP').value;
+  const u=db[n];
+  if(!u||u.p!==p){document.getElementById('lE').textContent="Invalid credentials";return}
+  if(u.pin){twoFAStep=true;pendingUser=n;document.getElementById('lE').textContent="";document.getElementById('loginForm').innerHTML='<h2 style="font-size:22px;margin-bottom:6px;background:linear-gradient(135deg,var(--or),var(--pk));-webkit-background-clip:text;-webkit-text-fill-color:transparent">2FA Verification</h2><p style="font-size:12px;color:var(--d);margin-bottom:24px">Enter your 6-digit security PIN</p><input class="li" id="l2FA" placeholder="000000" maxlength="6" style="letter-spacing:8px;font-size:20px;font-family:var(--mn)" onkeydown="if(event.key===\'Enter\')doLogin()"><button class="lb" onclick="doLogin()">Verify</button><button style="width:100%;padding:10px;border:1px solid var(--b2);border-radius:10px;background:transparent;color:var(--d);font-family:var(--ff);font-size:12px;cursor:pointer;margin-top:8px" onclick="twoFAStep=false;pendingUser=null;location.reload()">Back to Login</button><div class="le" id="lE"></div>';return}
+  U={...u,k:n};localStorage.setItem('su7',JSON.stringify(U));showApp()
+}
+function doLogout(){U=null;localStorage.removeItem('su7');location.reload()}
+function showApp(){document.getElementById('loginScreen').style.display='none';document.getElementById('app').style.display='block';document.getElementById('uP').innerHTML=`<span class="un">${U.n}</span><span class="ur">${U.r}</span>`;init()}
+function isA(){return U&&U.r==='admin'}
+
+/* Settings functions */
+function changePassword(oldP,newP,confirmP){
+  if(!U)return;
+  const db=getUserDB();const u=db[U.k];
+  if(!u){toast('User not found');return}
+  if(u.p!==oldP){toast('Wrong current password');return}
+  if(newP.length<6){toast('Min 6 characters');return}
+  if(newP!==confirmP){toast('Passwords dont match');return}
+  u.p=newP;db[U.k]=u;saveUserDB(db);U.p=newP;localStorage.setItem('su7',JSON.stringify(U));toast('Password updated');render()
+}
+function setup2FA(pin){
+  if(!U)return;if(pin.length!==6||isNaN(pin)){toast('PIN must be 6 digits');return}
+  const db=getUserDB();db[U.k].pin=pin;saveUserDB(db);U.pin=pin;localStorage.setItem('su7',JSON.stringify(U));toast('2FA enabled');render()
+}
+function disable2FA(){
+  if(!U)return;const db=getUserDB();delete db[U.k].pin;saveUserDB(db);delete U.pin;localStorage.setItem('su7',JSON.stringify(U));toast('2FA disabled');render()
+}
+function addUser(key,name,pass,role){
+  if(!isA()){toast('Admin only');return}
+  const db=getUserDB();key=key.toLowerCase().trim();
+  if(!key||!name||!pass){toast('Fill all fields');return}
+  if(key.length<2){toast('Username too short');return}
+  if(pass.length<6){toast('Password min 6 chars');return}
+  if(db[key]){toast('User already exists');return}
+  db[key]={n:name.trim(),p:pass,r:role||'manager'};saveUserDB(db);toast(name+' added');render()
+}
+function removeUser(key){
+  if(!isA()){toast('Admin only');return}
+  if(key===U.k){toast('Cannot remove yourself');return}
+  const db=getUserDB();if(!db[key]){toast('User not found');return}
+  const name=db[key].n;delete db[key];saveUserDB(db);toast(name+' removed');render()
+}
+function changeUserRole(key,newRole){
+  if(!isA()){toast('Admin only');return}
+  if(key===U.k){toast('Cannot change own role');return}
+  const db=getUserDB();if(!db[key])return;db[key].r=newRole;saveUserDB(db);toast(db[key].n+' → '+newRole);render()
+}
+function resetUserPassword(key,newPass){
+  if(!isA()){toast('Admin only');return}
+  if(newPass.length<6){toast('Min 6 chars');return}
+  const db=getUserDB();if(!db[key])return;db[key].p=newPass;saveUserDB(db);toast('Password reset for '+db[key].n);render()
+}
+function resetUser2FA(key){
+  if(!isA()){toast('Admin only');return}
+  const db=getUserDB();if(!db[key])return;delete db[key].pin;saveUserDB(db);toast('2FA removed for '+db[key].n);render()
+}
+
+/* ═══ ALL 82 CREATORS ═══ */
+var CR=[
+{id:"alexaadams3",n:"alexaadams3",t:"Team 1",g:3163.76},{id:"araqueenbae",n:"araqueenbae",t:"Team 1",g:622},{id:"AlexaWoods",n:"AlexaWoods",t:"Team 1",g:6603.20},{id:"leahsylvander",n:"leahsylvander",t:"Team 1",g:12215.84},{id:"AnnMariee",n:"AnnMariee",t:"Team 1",g:672.36},{id:"KleoMiller",n:"KleoMiller",t:"Team 1",g:960.20},{id:"TAETWERKS",n:"TAETWERKS",t:"Team 1",g:500},{id:"EVESEMPIRE",n:"EVESEMPIRE",t:"Team 1",g:607.25},{id:"AntonellaAnela",n:"AntonellaAnela",t:"Team 1",g:500},{id:"KatyaEvill",n:"KatyaEvill",t:"Team 1",g:500},{id:"Gigirivers",n:"Gigirivers",t:"Team 1",g:500},{id:"Libbyvelvet",n:"Libbyvelvet",t:"Team 1",g:634.80},
+{id:"sassymandy",n:"sassymandy",t:"Team 2",g:987.20},{id:"DaringKiara",n:"DaringKiara",t:"Team 2",g:729.10},{id:"ClaraT",n:"ClaraT",t:"Team 2",g:1986.60},{id:"naughtylittlesecrettt",n:"naughtylittlesecrettt",t:"Team 2",g:4390.70},{id:"Danielladay",n:"Danielladay",t:"Team 2",g:13419.44},{id:"Gabbymae",n:"Gabbymae",t:"Team 2",g:3283},{id:"Sofietaylor",n:"Sofietaylor",t:"Team 2",g:1186.08},{id:"BaddieBran",n:"BaddieBran",t:"Team 2",g:500},{id:"Sharonrose",n:"Sharonrose",t:"Team 2",g:691.85},{id:"Ellaking",n:"Ellaking",t:"Team 2",g:500},{id:"Lyssa",n:"Lyssa",t:"Team 2",g:617.50},{id:"Melaniedunn",n:"Melaniedunn",t:"Team 2",g:500},
+{id:"Briannaa",n:"Briannaa",t:"Team 3",g:1700.68},{id:"Aussielozza",n:"Aussielozza",t:"Team 3",g:3115.76},{id:"AddisonWoods",n:"AddisonWoods",t:"Team 3",g:500},{id:"bby_juju",n:"bby_juju",t:"Team 3",g:500},{id:"Rylie_Harper",n:"Rylie_Harper",t:"Team 3",g:500},{id:"NaoimiGunz",n:"NaoimiGunz",t:"Team 3",g:500},{id:"TheMandyRhea",n:"TheMandyRhea",t:"Team 3",g:3281},{id:"Anarose",n:"Anarose",t:"Team 3",g:1738.25},{id:"LilyBlaire",n:"LilyBlaire",t:"Team 3",g:1895.16},{id:"LizHolland",n:"LizHolland",t:"Team 3",g:12151.25},{id:"aaliyahxmarie",n:"aaliyahxmarie",t:"Team 3",g:500},
+{id:"Desiwaifu",n:"Desiwaifu",t:"Team 4",g:1761.70},{id:"Kristinasanta",n:"Kristinasanta",t:"Team 4",g:1608.72},{id:"SophieTyler",n:"SophieTyler",t:"Team 4",g:3264.20},{id:"ananello",n:"ananello",t:"Team 4",g:679.23},{id:"amaratsukii",n:"amaratsukii",t:"Team 4",g:2003.16},{id:"MayaLoco",n:"MayaLoco",t:"Team 4",g:500},{id:"TatianaVixen",n:"TatianaVixen",t:"Team 4",g:1381.15},{id:"Angiefaith",n:"Angiefaith",t:"Team 4",g:5040.90},{id:"BuffBarbie",n:"BuffBarbie",t:"Team 4",g:1916.89},{id:"Ariaaangel",n:"Ariaaangel",t:"Team 4",g:500},{id:"Sheskoko",n:"Sheskoko",t:"Team 4",g:500},
+{id:"Miabrookes",n:"Miabrookes",t:"Team 5",g:641.15},{id:"SnakeySmut",n:"SnakeySmut",t:"Team 5",g:500},{id:"MissSavage",n:"MissSavage",t:"Team 5",g:1075.76},{id:"MissJackson",n:"MissJackson",t:"Team 5",g:500},{id:"stargirlkells",n:"stargirlkells",t:"Team 5",g:3200.75},{id:"DaisyBlake",n:"DaisyBlake",t:"Team 5",g:5447.88},{id:"ALEXASMORGAN",n:"ALEXASMORGAN",t:"Team 5",g:2223.90},{id:"KendraKarter",n:"KendraKarter",t:"Team 5",g:1267.65},{id:"Sammyskye",n:"Sammyskye",t:"Team 5",g:3602.10},{id:"Lexystar",n:"Lexystar",t:"Team 5",g:1176.24},{id:"MelanieMorales",n:"MelanieMorales",t:"Team 5",g:519.10},
+{id:"Chanelx",n:"Chanelx",t:"Team 6",g:2307.36},{id:"leahhrae",n:"leahhrae",t:"Team 6",g:1004.84},{id:"slimthickqueenxo",n:"slimthickqueenxo",t:"Team 6",g:500},{id:"BrookeStacy",n:"BrookeStacy",t:"Team 6",g:3645.29},{id:"SerenaSantos",n:"SerenaSantos",t:"Team 6",g:2534},{id:"Yasminbby",n:"Yasminbby",t:"Team 6",g:674},{id:"Maddiejones",n:"Maddiejones",t:"Team 6",g:2634.65},{id:"KendallBunny",n:"KendallBunny",t:"Team 6",g:766.75},{id:"PumpkinStarBurst",n:"PumpkinStarBurst",t:"Team 6",g:898.20},{id:"EMILIERAE",n:"EMILIERAE",t:"Team 6",g:500},{id:"Edenswallows",n:"Edenswallows",t:"Team 6",g:500},
+{id:"bellareid",n:"bellareid",t:"Team 7",g:4735.15},{id:"nikkinicolebby",n:"nikkinicolebby",t:"Team 7",g:2109.80},{id:"devingirl",n:"devingirl",t:"Team 7",g:3718.30},{id:"jacydawn",n:"jacydawn",t:"Team 7",g:1530},{id:"TaliaMint",n:"TaliaMint",t:"Team 7",g:500},{id:"LatinaLight",n:"LatinaLight",t:"Team 7",g:500},{id:"CallMeNarcisa",n:"CallMeNarcisa",t:"Team 7",g:1110.75},{id:"itsbrila",n:"itsbrila",t:"Team 7",g:601.20},{id:"Stacylush",n:"Stacylush",t:"Team 7",g:1748.58},{id:"Chloejade",n:"Chloejade",t:"Team 7",g:2511.48},{id:"Quinnwaters",n:"Quinnwaters",t:"Team 7",g:500},
+];
+var TEAM_GOALS={};CR.forEach(c=>{if(!TEAM_GOALS[c.t])TEAM_GOALS[c.t]=0;TEAM_GOALS[c.t]+=c.g});
+
+var TC={"Team 1":"#FF6B35","Team 2":"#FF3CAC","Team 3":"#4ECDC4","Team 4":"#FFB347","Team 5":"#A78BFA","Team 6":"#F472B6","Team 7":"#60A5FA"};
+
+/* ═══ 24 CHATTERS ═══ */
+var D=[
+{id:1,n:"Ayedah Mangotara",st:"Active",team:"Team 1",shift:"Morning",goal:4500,f14:3652.96,l15:1152.70,tot:4805.66,sales:128,daily:[382.16,0,0,696.72,937.76,0]},
+{id:2,n:"Cristy Mae Murillo",st:"Active",team:"Team 1",shift:"Day",goal:4500,f14:4328.56,l15:1099.06,tot:5427.62,sales:142,daily:[121.36,80,2759.20,0,0,129.60]},
+{id:3,n:"Ralflorence Bernal Alambra",st:"Active",team:"Team 1",shift:"Night",goal:4500,f14:3428.76,l15:1876.54,tot:5305.30,sales:155,daily:[162.39,165.60,0,366.40,308,200.79]},
+{id:4,n:"Stephen Chege",st:"Active",team:"Team 1",shift:"Filler-4x",goal:7000,f14:2080.72,l15:1515.08,tot:3595.80,sales:98,daily:[0,36,391.52,112,21.60,201.60]},
+{id:5,n:"Arwin Jay Sadaba Mance",st:"Active",team:"Team 2",shift:"Morning",goal:7000,f14:1212.40,l15:820.80,tot:2033.20,sales:92,daily:[94,153.60,0,0,0,0]},
+{id:6,n:"Rena Mae Barrios",st:"Active",team:"Team 2",shift:"Night",goal:7000,f14:2391.52,l15:2703.84,tot:5095.36,sales:165,daily:[166.48,218.80,284.32,147.60,0,0]},
+{id:7,n:"Robin Neil Ife Ras",st:"Active",team:"Team 3",shift:"Morning",goal:4500,f14:1120.88,l15:1695.28,tot:2816.16,sales:92,daily:[106.40,0,0,94.40,193.60,54.40]},
+{id:8,n:"Gillian Ckent Gustilo",st:"Active",team:"Team 3",shift:"Day",goal:4500,f14:3807.52,l15:1592.96,tot:5400.48,sales:135,daily:[159.20,518.40,1382.40,0,0,251.92]},
+{id:9,n:"Gabriel Custodio",st:"Active",team:"Team 3",shift:"Night",goal:4500,f14:1538.96,l15:1464.40,tot:3003.36,sales:95,daily:[0,0,0,340.80,178.96,84.40]},
+{id:10,n:"Christian Allison Santiago",st:"Active",team:"Team 3",shift:"Filler-4x",goal:4500,f14:2243.44,l15:1142,tot:3385.44,sales:105,daily:[0,41.20,77.76,237.84,351.20,44]},
+{id:11,n:"Prince Resurreccion",st:"Active",team:"Team 4",shift:"Morning",goal:4500,f14:1075.60,l15:1950.16,tot:3025.76,sales:110,daily:[174.40,44,165.60,0,0,0]},
+{id:12,n:"Baby Camille Vizereno",st:"Active",team:"Team 4",shift:"Day",goal:4500,f14:7457.04,l15:842.80,tot:8299.84,sales:121,daily:[39.92,0,6407.12,48.72,0,508.88]},
+{id:13,n:"Michelle Rizalde",st:"Active",team:"Team 4",shift:"Night",goal:4500,f14:3603.84,l15:4992.48,tot:8596.32,sales:310,daily:[217.04,161.60,98.32,141.60,0,44]},
+{id:14,n:"Shahin Nea Fe Ocot",st:"Active",team:"Team 5",shift:"Morning",goal:4500,f14:848.80,l15:973.84,tot:1822.64,sales:101,daily:[0,40,0,61.60,234.40,6.40]},
+{id:15,n:"Keziah Escabarte",st:"Active",team:"Team 5",shift:"Day",goal:4500,f14:1025.84,l15:613.28,tot:1639.12,sales:75,daily:[85.60,7.20,436.64,0,0,76.80]},
+{id:16,n:"Emmanuel Effiom",st:"Active",team:"Team 5",shift:"Filler-4x",goal:4500,f14:1563.19,l15:875.79,tot:2438.98,sales:98,daily:[0,6.40,361.28,215.60,166.40,339.60]},
+{id:17,n:"Donna Deine Caberto",st:"Active",team:"Team 6",shift:"Morning",goal:4500,f14:719.76,l15:632.80,tot:1352.56,sales:68,daily:[80,48,43.20,0,0,181.20]},
+{id:18,n:"Luzinda Nina Panong",st:"Active",team:"Team 6",shift:"Day",goal:4500,f14:2379.49,l15:2152.38,tot:4531.87,sales:118,daily:[188.80,286.72,228,148.72,270.40,31.20]},
+{id:19,n:"John Joshua Pelayo",st:"Active",team:"Team 6",shift:"Night",goal:4500,f14:914.80,l15:1260.64,tot:2175.44,sales:88,daily:[36.80,96,64,174.40,0,0]},
+{id:20,n:"Demcie Manansala",st:"Active",team:"Team 7",shift:"Morning",goal:4500,f14:975.12,l15:891.20,tot:1866.32,sales:78,daily:[345.60,0,0,131.52,177.60,8]},
+{id:21,n:"Allen Bueno",st:"Active",team:"Team 7",shift:"Day",goal:4500,f14:4036,l15:1851.28,tot:5887.28,sales:110,daily:[230,861.52,1948.32,0,62.32,0]},
+{id:22,n:"Justine Heart Cuevas",st:"Active",team:"Team 7",shift:"Night",goal:4500,f14:2544.96,l15:824.56,tot:3369.52,sales:105,daily:[253.20,438.40,0,82.40,160,84.40]},
+{id:23,n:"Ron Marlon Lagunilla Contado",st:"Active",team:"Team 7",shift:"Filler-2x",goal:2000,f14:1457.12,l15:394.80,tot:1851.92,sales:84,daily:[0,54.40,360.80,167.60,0,0]},
+{id:24,n:"Jenifer Flores",st:"PTO",team:"—",shift:"—",goal:4500,f14:731.60,l15:390,tot:1121.60,sales:59,daily:[67.20,130,0,73.60,0,14.40]},
+];
+
+var MD=[{d:1,s:3228.60,h:[102.50,212,118,250.30,694.90,54.50,595,290.30,175.90,214.30,295.50,225.40]},{d:2,s:4683.39,h:[384,340.09,491.50,804.50,190,163,72.50,259,193.70,1348.50,257,179.60]},{d:3,s:17971.30,h:[116,159.50,544.60,390.10,132,77,68,298.90,2074,7559,2906.90,3645.30]},{d:4,s:3445.90,h:[382.30,682.50,676.50,143,67,77.50,61,122.40,23.90,79.10,227.70,903]},{d:5,s:4709.50,h:[1016,654.80,649,40,72.50,0,45,85,710.20,690.50,338,408.50]},{d:6,s:3250.59,h:[143,568.20,450.50,210.49,135,360.70,70,154.90,169.90,167.20,559.70,261]},{d:7,s:3319.80,h:[168.50,197,126.30,502.50,78.80,322.30,940.90,316.70,324,47,66,229.80]},{d:8,s:4698.16,h:[268,719.20,778.80,214.30,269,189.76,197,675.10,802,138.50,361,85.50]},{d:9,s:2982.90,h:[211.80,499.40,229.80,515,52,21,407,174.40,100,241.80,253.80,276.90]},{d:10,s:2908.30,h:[218,110.50,1310.50,318.50,84,124,45.80,88.50,77,181,285.50,65]},{d:11,s:4035.80,h:[152.20,303.10,963.90,1247.50,174,450,37,198.80,133,108,149,119.30]},{d:12,s:4251.70,h:[217.50,1240.50,561.70,925.50,75.50,95.50,165,436,68,199.50,32,235]},{d:13,s:5027.89,h:[374.30,770,1545.89,141.50,38.60,120.50,130,246.60,110.50,384.50,920.50,245]},{d:14,s:4486.48,h:[312.49,423.99,356.10,498,685,563,221,168,563.30,272,289,134.60]},{d:15,s:2274.09,h:[139.29,98.50,546.10,138.50,70,344.50,260.10,109,103.60,137.20,263.30,64]},{d:16,s:4322.60,h:[682.70,850.20,533.10,310.70,498.50,315,446.30,271.70,178.40,60,140,36]},{d:17,s:2831.11,h:[390.94,283.70,159.50,195.99,156.20,122.70,565.90,96.90,273.30,371.78,128.90,85.30]},{d:18,s:2603.01,h:[154.99,383.98,273.10,410.34,0,39.90,353,106.70,331.40,187.50,259.60,102.50]},{d:19,s:3849.97,h:[255.90,199.80,359.67,734.38,58.50,417.93,263.50,66.10,497.90,336.40,209.70,450.19]},{d:20,s:3482.11,h:[714.28,279.17,254,231.48,70.20,254.69,682.87,209.70,500.50,52.90,153.82,78.50]},{d:21,s:4978.69,h:[406.50,1067.40,144.80,829.80,978.10,475.20,174.09,286.20,137.30,244.90,110.80,123.60]},{d:22,s:2659.88,h:[354.68,405.90,248.40,108.30,29.20,349.50,54.50,191,530.30,191.30,131.80,65]},{d:23,s:4468.70,h:[413.40,1028.10,474.90,675.60,151,114.50,135,439.90,155.30,166.30,369.70,345]},{d:24,s:4952.82,h:[1214.45,364.47,264.10,313.20,185.90,666.60,78.30,86.60,65.10,60.60,1101.40,552.10]},{d:25,s:5249.77,h:[618.67,288,915.40,1013,86.20,32.50,223.50,716.40,376.40,149.90,349.20,480.60]},{d:26,s:2563.79,h:[596.89,178.50,63.40,336.70,86.20,32.50,223.50,376.40,149.90,309.50,109.30,101.00]},{d:27,s:4207.12,h:[807.10,1191.00,1079.80,256.00,159.00,402.00,150.10,84.30,171.00,33.00,118.50,455.20]},{d:28,s:4149.10,h:[448.10,451.80,273.00,355.00,154.00,96.50,171.00,33.00,118.50,845.47,175.50,94.90]},{d:29,s:5420.89,h:[237.30,61.30,701.30,311.30,364.75,132.79,240.00,1203.00,108.70,237.10,784.80,774.90]},{d:30,s:6457.00,h:[1247.39,344.49,579.19,1682.00,196.75,125.71,402.00,462.00,510.13,153.10,477.80,276.44]},{d:31,s:4893.56,h:[1041.29,344.49,0,0,0,0,0,0,0,0,0,0]}];
+var TS=["12AM","2AM","4AM","6AM","8AM","10AM","12PM","2PM","4PM","6PM","8PM","10PM"];
+var ME={mr:139820.13,mg:170000,mp:138700.83,dg:5483.87,dp:4474.22,td:4893.56,yd:6457.00,tc:102,yc:225,sc:4789,feb:134103.62};
+
+/* ─── Enrich ─── */
+function enrich(){D.forEach(c=>{c.avgTicket=c.sales>0?c.tot/c.sales:0;c.dailyAvg=c.tot/(c.st==="PTO"?10:26);c.momentum=c.f14>0?c.l15/c.f14:0;c.pctGoal=c.goal>0?(c.tot/c.goal*100):0})}
+enrich();
+
+function getTier(c){if(c.st==="PTO")return"watch";const mx=Math.max(...D.filter(x=>x.st==="Active").map(x=>x.tot));const s=(c.tot/mx)*30+(c.dailyAvg/400)*20+(Math.min(c.momentum,2)/2)*15+((c.daily||[]).filter(v=>v>0).length/6)*10+(c.avgTicket/70)*25;return s>=65?"star":s>=45?"solid":s>=28?"watch":"critical"}
+function getAct(c){const t=getTier(c);if(c.st==="PTO")return{l:"PTO",cl:"var(--d)",u:10,d:"Inactive",y:"info"};if(t==="critical"&&(c.momentum<0.6||c.avgTicket<20))return{l:"TERMINATE",cl:"var(--rd)",u:0,d:c.avgTicket<20?"Sub-$20 ticket. No upselling skill.":"Under 60% momentum. Not recoverable.",y:"terminate"};if(t==="critical")return{l:"Final Warning",cl:"var(--or)",u:1,d:"Must improve this cycle.",y:"warning"};if(t==="watch"&&c.momentum<0.7)return{l:"Reassign",cl:"var(--am)",u:2,d:"Declining. Move to lower page.",y:"reassign"};if(t==="watch"&&c.avgTicket<25)return{l:"Coach",cl:"var(--am)",u:3,d:"Needs upselling training.",y:"coach"};if(t==="watch")return{l:"Monitor",cl:"var(--am)",u:3,d:"Weekly check-ins.",y:"monitor"};if(t==="solid"&&c.momentum>1.2)return{l:"Promote",cl:"var(--tl)",u:5,d:"Ready for higher tier.",y:"promote"};if(t==="star")return{l:"★ Star",cl:"var(--gn)",u:6,d:"Protect.",y:"star"};return{l:"Maintain",cl:"var(--d)",u:4,d:"On track.",y:"maintain"}}
+function fmt(n){return"$"+n.toLocaleString("en-US",{minimumFractionDigits:2,maximumFractionDigits:2})}
+function fK(n){return n>=1000?"$"+(n/1000).toFixed(1)+"k":fmt(n)}
+function fI(n){return"$"+Math.round(n).toLocaleString()}
+function tb(t){return`<span class="badge b-${t}">${t.toUpperCase()}</span>`}
+function ab(a){return`<span class="ab" style="background:${a.cl}15;color:${a.cl}">${a.l}</span>`}
+
+/* ─── Storage ─── */
+function gS(){try{return JSON.parse(localStorage.getItem('sv7')||'{}')}catch(e){return{}}}
+function sS(d){localStorage.setItem('sv7',JSON.stringify(d))}
+function gCS(id){return gS()[id]||{notes:[],actions:[],status:null}}
+function saveNote(id,text){const s=gS();if(!s[id])s[id]={notes:[],actions:[],status:null};s[id].notes.unshift({text,time:new Date().toLocaleString(),by:U.n,id:Date.now()});sS(s);toast("Note saved");openCh(id)}
+function delNote(cid,nid){if(!isA()){toast("Admin only");return}const s=gS();if(s[cid])s[cid].notes=s[cid].notes.filter(n=>n.id!==nid);sS(s);openCh(cid)}
+function saveActn(id,a,d){const s=gS();if(!s[id])s[id]={notes:[],actions:[],status:null};s[id].actions.unshift({a,d,time:new Date().toLocaleString(),by:U.n});s[id].status=a;sS(s);toast(a);openCh(id);render()}
+function gT(){try{return JSON.parse(localStorage.getItem('st7')||'[]')}catch(e){return[]}}
+function sT(t){localStorage.setItem('st7',JSON.stringify(t))}
+function addTask(text,pri,cid){const t=gT();t.unshift({id:Date.now(),text,pri,cid:cid||0,done:false,created:new Date().toLocaleString(),by:U.n,updates:[]});sT(t);render()}
+function togTask(id){const t=gT();const tk=t.find(x=>x.id===id);if(tk)tk.done=!tk.done;sT(t);render()}
+function delTask(id){if(!isA()){toast("Admin only");return}sT(gT().filter(x=>x.id!==id));render()}
+function addTU(id,text){const t=gT();const tk=t.find(x=>x.id===id);if(tk)tk.updates.unshift({text,time:new Date().toLocaleString(),by:U.n});sT(t);render()}
+function toast(m){const d=document.createElement('div');d.className='tst tst-ok';d.textContent=m;document.getElementById('toasts').appendChild(d);setTimeout(()=>d.remove(),3000)}
+
+/* ─── State ─── */
+var tab="overview",sk="tot",sd="desc",ftm="all",ftr="all",crFilter="all";
+var TABS=[{id:"overview",l:"Overview"},{id:"creators",l:"Creators"},{id:"chatters",l:"Chatters"},{id:"pricing",l:"Avg Ticket"},{id:"actions",l:"Actions"},{id:"optimize",l:"⚡ Optimize"},{id:"tasks",l:"Tasks"},{id:"heatmap",l:"Heat Map"},{id:"settings",l:"⚙ Settings"}];
+function switchTab(id){tab=id;document.querySelectorAll('.tc').forEach(e=>e.classList.remove('on'));document.getElementById('t-'+id).classList.add('on');document.querySelectorAll('.tb').forEach((b,i)=>b.classList.toggle('on',TABS[i].id===id));render()}
+function doSort(k){if(sk===k)sd=sd==="desc"?"asc":"desc";else{sk=k;sd="desc"}render()}
+function closeP(){document.getElementById('ov').classList.remove('open');document.getElementById('pnl').classList.remove('open')}
+
+/* ─── TODAY/YESTERDAY CHATTER RANKINGS ─── */
+var DAY_RANKINGS={
+  31:[{n:"Michelle Rizalde",team:"Team 4",sales:1867.90,count:26},{n:"Emmanuel Effiom",team:"Team 5",sales:843.77,count:10},{n:"Stephen Chege",team:"Team 1",sales:811.49,count:18},{n:"Rena Mae Barrios",team:"Team 2",sales:457.40,count:12},{n:"Gabriel Custodio",team:"Team 3",sales:225.00,count:6},{n:"Prince Resurreccion",team:"Team 4",sales:155.69,count:10},{n:"Robin Neil Ife Ras",team:"Team 3",sales:115.08,count:3},{n:"Christian Allison Santiago",team:"Team 3",sales:115.00,count:4},{n:"Gillian Ckent Gustilo",team:"Team 3",sales:62.00,count:4},{n:"Arwin Jay Sadaba Mance",team:"Team 2",sales:57.00,count:2},{n:"Baby Camille Vizereno",team:"Team 4",sales:25.00,count:1},{n:"Cristy Mae Murillo",team:"Team 1",sales:19.60,count:1}],
+  30:[{n:"Michelle Rizalde",team:"Team 4",sales:1060.10,count:17},{n:"Ralflorence Bernal Alambra",team:"Team 1",sales:950.00,count:23},{n:"Rena Mae Barrios",team:"Team 2",sales:862.40,count:28},{n:"Justine Heart Cuevas",team:"Team 7",sales:745.28,count:10},{n:"Arwin Jay Sadaba Mance",team:"Team 2",sales:514.09,count:19},{n:"Stephen Chege",team:"Team 1",sales:480.50,count:12},{n:"Emmanuel Effiom",team:"Team 5",sales:420.30,count:8},{n:"John Joshua Pelayo",team:"Team 6",sales:363.30,count:8},{n:"Gabriel Custodio",team:"Team 3",sales:320.38,count:8},{n:"Gillian Ckent Gustilo",team:"Team 3",sales:285.00,count:6},{n:"Baby Camille Vizereno",team:"Team 4",sales:240.50,count:4},{n:"Luzinda Nina Panong",team:"Team 6",sales:215.15,count:5}],
+  29:[{n:"Rena Mae Barrios",team:"Team 2",sales:780.40,count:18},{n:"Michelle Rizalde",team:"Team 4",sales:720.50,count:14},{n:"Ralflorence Bernal Alambra",team:"Team 1",sales:650.30,count:12},{n:"Gillian Ckent Gustilo",team:"Team 3",sales:580.20,count:10},{n:"Baby Camille Vizereno",team:"Team 4",sales:520.60,count:6},{n:"Allen Bueno",team:"Team 7",sales:450.80,count:8},{n:"Cristy Mae Murillo",team:"Team 1",sales:380.40,count:7},{n:"Luzinda Nina Panong",team:"Team 6",sales:310.50,count:5},{n:"Stephen Chege",team:"Team 1",sales:250.30,count:4},{n:"Justine Heart Cuevas",team:"Team 7",sales:220.40,count:4},{n:"Gabriel Custodio",team:"Team 3",sales:180.60,count:3},{n:"Emmanuel Effiom",team:"Team 5",sales:120.50,count:2}]
+};
+
+function openDay(dayNum){
+  const dayData=MD.find(d=>d.d===dayNum);
+  if(!dayData)return;
+  const rankings=DAY_RANKINGS[dayNum]||[];
+  const totalSales=dayData.s;
+  const isToday=dayNum===27;
+  const slots=["12 AM","2 AM","4 AM","6 AM","8 AM","10 AM","12 PM","2 PM","4 PM","6 PM","8 PM","10 PM"];
+  const maxSlot=Math.max(...dayData.h,1);
+  const pctGoal=ME.dg>0?((totalSales/ME.dg)*100).toFixed(1):0;
+  const totalCount=rankings.reduce((s,r)=>s+r.count,0);
+  
+  // Group by team
+  const teamSales={};
+  rankings.forEach(r=>{if(!teamSales[r.team])teamSales[r.team]={sales:0,count:0,chatters:[]};teamSales[r.team].sales+=r.sales;teamSales[r.team].count+=r.count;teamSales[r.team].chatters.push(r)});
+
+  document.getElementById('ov').classList.add('open');document.getElementById('pnl').classList.add('open');
+  document.getElementById('pT').innerHTML='March '+dayNum+(isToday?' (Today)':dayNum===26?' (Yesterday)':'');
+  document.getElementById('pB').innerHTML=`
+    <!-- Day Summary -->
+    <div style="margin-bottom:20px">
+      <div class="pg">
+        ${[
+          {l:"Total Sales",v:fmt(totalSales),cl:totalSales>=ME.dg?'var(--gn)':totalSales>=ME.dg*0.7?'var(--am)':'var(--rd)'},
+          {l:"% of Daily Goal",v:pctGoal+'%',cl:pctGoal>=100?'var(--gn)':pctGoal>=70?'var(--am)':'var(--rd)'},
+          {l:"Sale Count",v:totalCount||ME.tc},
+          {l:"Daily Goal",v:fmt(ME.dg)},
+          {l:"Avg per Sale",v:totalCount?fmt(totalSales/totalCount):'—'},
+          {l:"vs Goal",v:totalSales>=ME.dg?'+'+fmt(totalSales-ME.dg):'-'+fmt(ME.dg-totalSales),cl:totalSales>=ME.dg?'var(--gn)':'var(--rd)'}
+        ].map(x=>`<div class="ps"><div class="dl">${x.l}</div><div class="dv"${x.cl?' style="color:'+x.cl+'"':''}>${x.v}</div></div>`).join('')}
+      </div>
+    </div>
+
+    <!-- Hourly Breakdown -->
+    <div style="margin-bottom:24px">
+      <div class="lbl" style="margin-bottom:12px">Hourly Sales Breakdown</div>
+      <div style="display:flex;align-items:flex-end;gap:4px;height:140px;padding:0 4px">
+        ${dayData.h.map((v,i)=>{
+          const h=maxSlot>0?Math.max((v/maxSlot)*120,v>0?4:1):1;
+          const bg=v===0?'rgba(255,255,255,0.03)':v>=maxSlot*0.7?'linear-gradient(180deg,var(--pk),var(--or))':v>=maxSlot*0.3?'rgba(255,107,53,0.5)':'rgba(255,255,255,0.12)';
+          return`<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px">
+            <div style="font-size:8px;font-family:var(--mn);color:var(--d)">${v>0?(v>=1000?fK(v):fmt(v)):''}</div>
+            <div style="width:100%;height:${h}px;border-radius:3px;background:${bg}" title="${slots[i]}: ${fmt(v)}"></div>
+            <div style="font-size:7px;color:var(--d)">${slots[i]}</div>
+          </div>`;
+        }).join('')}
+      </div>
+      <div style="display:flex;justify-content:space-between;margin-top:8px;font-size:10px;color:var(--d)">
+        <span>Peak: ${slots[dayData.h.indexOf(Math.max(...dayData.h))]} (${fmt(Math.max(...dayData.h))})</span>
+        <span>Dead hours: ${dayData.h.filter(v=>v===0).length}</span>
+      </div>
+    </div>
+
+    <!-- Chatter Rankings -->
+    ${rankings.length?`
+    <div style="margin-bottom:24px">
+      <div class="lbl" style="margin-bottom:12px">Chatter Sales Ranking</div>
+      <div class="tw"><table>
+        <thead><tr><th>#</th><th>Chatter</th><th>Team</th><th>Sales $</th><th># Sales</th><th>Avg/Sale</th><th>% of Day</th></tr></thead>
+        <tbody>
+          ${rankings.sort((a,b)=>b.sales-a.sales).map((r,i)=>{
+            const chatter=D.find(c=>c.n===r.n);
+            const pct=totalSales>0?((r.sales/totalSales)*100).toFixed(1):'0';
+            const avgSale=r.count>0?(r.sales/r.count):0;
+            return`<tr ${chatter?'onclick="openCh('+chatter.id+')" style="cursor:pointer"':''}>
+              <td style="font-family:var(--mn);color:${i<3?'var(--pk)':'var(--d)'};font-size:11px;font-weight:${i<3?700:400}">${i+1}</td>
+              <td style="font-weight:600;font-size:13px">${r.n}</td>
+              <td><span style="color:${TC[r.team]||'var(--d)'};font-size:11px;font-weight:600">${r.team}</span></td>
+              <td style="font-family:var(--mn);font-weight:700;color:${i<3?'var(--gn)':''}">${fmt(r.sales)}</td>
+              <td style="font-family:var(--mn);font-size:11px">${r.count}</td>
+              <td style="font-family:var(--mn);font-size:11px">${fmt(avgSale)}</td>
+              <td>
+                <div style="display:flex;align-items:center;gap:6px">
+                  <div style="width:60px;height:5px;background:rgba(255,255,255,0.04);border-radius:3px;overflow:hidden"><div style="width:${pct}%;height:100%;background:var(--pk);border-radius:3px"></div></div>
+                  <span style="font-family:var(--mn);font-size:10px;color:var(--d)">${pct}%</span>
+                </div>
+              </td>
+            </tr>`;
+          }).join('')}
+        </tbody>
+      </table></div>
+    </div>
+    `:'<div style="padding:20px;text-align:center;color:var(--d);font-size:13px">Individual chatter data not available for this day yet.</div>'}
+
+    <!-- Team Breakdown -->
+    ${Object.keys(teamSales).length?`
+    <div style="margin-bottom:20px">
+      <div class="lbl" style="margin-bottom:12px">Team Breakdown</div>
+      ${Object.entries(teamSales).sort((a,b)=>b[1].sales-a[1].sales).map(([team,data])=>{
+        const pct=totalSales>0?((data.sales/totalSales)*100).toFixed(1):'0';
+        return`<div style="display:flex;align-items:center;gap:12px;padding:10px 14px;border-radius:10px;margin-bottom:6px;background:var(--s1);border:1px solid var(--b1);cursor:pointer" onclick="openTeam('${team}')">
+          <span style="font-weight:700;color:${TC[team]};width:60px">${team}</span>
+          <div style="flex:1;height:6px;background:rgba(255,255,255,0.04);border-radius:3px;overflow:hidden"><div style="width:${pct}%;height:100%;background:${TC[team]};border-radius:3px"></div></div>
+          <span style="font-family:var(--mn);font-weight:700;width:80px;text-align:right">${fmt(data.sales)}</span>
+          <span style="font-size:10px;color:var(--d);width:40px;text-align:right">${pct}%</span>
+          <span style="font-size:10px;color:var(--d);width:50px;text-align:right">${data.count} sales</span>
+        </div>`;
+      }).join('')}
+    </div>
+    `:''}
+
+    <!-- Creator Revenue (estimated from team data) -->
+    ${Object.keys(teamSales).length?`
+    <div>
+      <div class="lbl" style="margin-bottom:8px">Estimated Creator Revenue</div>
+      <div style="font-size:11px;color:var(--d);margin-bottom:12px">Based on team chatter sales. Each team's revenue flows to their managed creators.</div>
+      ${Object.entries(teamSales).sort((a,b)=>b[1].sales-a[1].sales).map(([team,data])=>{
+        const creators=CR.filter(c=>c.t===team).sort((a,b)=>b.g-a.g).slice(0,5);
+        return creators.map(cr=>`
+          <div style="display:flex;align-items:center;gap:10px;padding:6px 14px;border-radius:8px;margin-bottom:4px;background:var(--s1)" onclick="openTeam('${team}')" style="cursor:pointer">
+            <span style="font-size:12px;font-weight:600;color:${TC[team]};width:160px">${cr.n}</span>
+            <span style="font-size:10px;color:var(--d);width:50px">${team}</span>
+            <span style="font-size:10px;color:var(--d)">Goal: ${fmt(cr.g)}</span>
+          </div>
+        `).join('');
+      }).join('')}
+    </div>
+    `:''}
+  `;
+}
+
+/* ─── PANELS ─── */
+function openCh(id){
+  const c=D.find(x=>x.id===id);if(!c)return;
+  const t=getTier(c),a=getAct(c),cs=gCS(id),mom=((c.momentum-1)*100).toFixed(1);
+  document.getElementById('ov').classList.add('open');document.getElementById('pnl').classList.add('open');
+  document.getElementById('pT').innerHTML=`${c.n} ${tb(t)}`;
+  const stB=cs.status?`<span class="si ${cs.status.includes('Fired')?'si-r':cs.status.includes('Coaching')||cs.status.includes('Move')?'si-a':'si-p'}">${cs.status}</span>`:'<span class="si si-p">Pending</span>';
+  document.getElementById('pB').innerHTML=`
+    <div style="margin-bottom:20px"><div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px"><div class="lbl">Decision</div>${stB}</div>
+    <div style="padding:14px;border-radius:12px;background:${a.cl}08;border:1px solid ${a.cl}20"><div style="font-size:14px;font-weight:700;color:${a.cl};margin-bottom:3px">${a.l}</div><div style="font-size:12px;color:var(--m)">${a.d}</div></div></div>
+    <div style="margin-bottom:20px"><div class="lbl" style="margin-bottom:10px">Performance</div><div class="pg">
+      ${[{l:"March Total",v:fmt(c.tot)},{l:"Goal",v:fmt(c.goal)},{l:"% to Goal",v:c.pctGoal.toFixed(0)+"%",cl:c.pctGoal>=80?'var(--gn)':c.pctGoal>=50?'var(--am)':'var(--rd)'},{l:"Avg Ticket",v:fmt(c.avgTicket),cl:c.avgTicket>=40?'var(--gn)':c.avgTicket<25?'var(--rd)':''},{l:"Sales",v:c.sales},{l:"Daily Avg",v:fmt(c.dailyAvg)},{l:"Momentum",v:(mom>0?'+':'')+mom+'%',cl:c.momentum>=1?'var(--gn)':c.momentum<0.7?'var(--rd)':''},{l:"Team / Shift",v:c.team+' · '+c.shift},{l:"1st Half",v:fmt(c.f14)}].map(x=>`<div class="ps"><div class="dl">${x.l}</div><div class="dv"${x.cl?' style="color:'+x.cl+'"':''}>${x.v}</div></div>`).join('')}
+    </div></div>
+    ${c.daily&&c.daily.length?`<div style="margin-bottom:20px"><div class="lbl" style="margin-bottom:8px">Daily (Mar 1–6)</div><div style="display:flex;gap:6px;flex-wrap:wrap">${c.daily.map((v,i)=>`<div style="padding:7px 12px;border-radius:8px;background:var(--s1);border:1px solid var(--b1);text-align:center;flex:1;min-width:65px"><div style="font-size:9px;color:var(--d)">Mar ${i+1}</div><div style="font-size:13px;font-weight:700;font-family:var(--mn);color:${v>0?'var(--t)':'var(--f)'}">${v>0?fmt(v):'—'}</div></div>`).join('')}</div></div>`:''}
+    <div style="margin-bottom:16px"><div class="lbl" style="margin-bottom:8px">Actions</div><div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px">
+      <button class="abtn a-note" onclick="document.getElementById('ni${id}').focus()">📝 Note</button>
+      <button class="abtn a-coach" onclick="saveActn(${id},'Coaching','Assigned');addTask('Coach ${c.n} — upselling training','high',${id})">📋 Coach</button>
+      <button class="abtn a-replace" onclick="saveActn(${id},'Replace Requested','Finding replacement');addTask('Replace ${c.n} on ${c.team} (${c.shift})','urgent',${id})">⟳ Replace</button>
+      <button class="abtn a-fire" onclick="if(confirm('Fire ${c.n}?')){saveActn(${id},'Fired','Terminated');addTask('Process termination: ${c.n} — redistribute ${c.shift} on ${c.team}','urgent',${id})}">🔥 Fire</button>
+      ${t==='star'||a.y==='promote'?`<button class="abtn a-move" onclick="saveActn(${id},'Move Approved','Moving up');addTask('Move ${c.n} to higher page','medium',${id})">⬆ Move Up</button>`:''}
+    </div>
+    <textarea class="na" id="ni${id}" placeholder="Leave a note..."></textarea>
+    <button class="ns" onclick="const e=document.getElementById('ni${id}');if(e.value.trim()){saveNote(${id},e.value.trim());e.value=''}">Save Note</button></div>
+    ${cs.actions.length?`<div class="lbl" style="margin-bottom:6px">History</div>${cs.actions.map(a=>`<div style="padding:6px 10px;border-radius:6px;font-size:11px;margin-bottom:4px;background:${a.a.includes('Fired')?'rgba(255,59,92,0.06)':a.a.includes('Coaching')||a.a.includes('Move')?'rgba(0,229,155,0.06)':'rgba(255,179,71,0.06)'}"><strong>${a.a}</strong> <span style="color:var(--d)">by ${a.by} · ${a.time}</span></div>`).join('')}`:''}
+    ${cs.notes.length?`<div style="margin-top:12px"><div class="lbl" style="margin-bottom:6px">Notes</div>${cs.notes.map(n=>`<div class="saved-note" style="padding:8px 12px;border-radius:8px;background:var(--s1);border:1px solid var(--b1);margin-bottom:6px;font-size:12px;position:relative"><div style="font-size:9px;color:var(--d)">${n.by} · ${n.time}</div><div style="color:var(--m);margin-top:3px">${n.text}</div>${isA()?`<button class="del-btn" onclick="event.stopPropagation();delNote(${id},${n.id})" style="position:absolute;top:6px;right:6px">✕</button>`:''}</div>`).join('')}</div>`:''}
+  `;
+}
+
+function openTeam(team){
+  const creators=CR.filter(c=>c.t===team);
+  const chatters=D.filter(c=>c.st==="Active"&&c.team===team);
+  const teamGoal=TEAM_GOALS[team]||0;
+  const chatterSales=chatters.reduce((s,c)=>s+c.tot,0);
+  const shifts={Morning:[],Day:[],Night:[],"Filler-4x":[],"Filler-2x":[]};
+  chatters.forEach(c=>{if(shifts[c.shift])shifts[c.shift].push(c)});
+  const gaps=["Morning","Day","Night"].filter(sh=>!chatters.some(c=>c.shift===sh));
+  const topCreators=creators.sort((a,b)=>b.g-a.g).slice(0,10);
+
+  document.getElementById('ov').classList.add('open');document.getElementById('pnl').classList.add('open');
+  document.getElementById('pT').innerHTML=`<span style="color:${TC[team]}">${team}</span> · ${creators.length} creators · ${chatters.length} chatters`;
+  document.getElementById('pB').innerHTML=`
+    <div style="margin-bottom:20px"><div class="pg">
+      ${[{l:"Total Creator Goals",v:fK(teamGoal)},{l:"Chatter Sales (March)",v:fmt(chatterSales)},{l:"Creators",v:creators.length},{l:"Chatters",v:chatters.length},{l:"Shift Gaps",v:gaps.length?gaps.join(', '):'None',cl:gaps.length?'var(--rd)':'var(--gn)'}].map(x=>`<div class="ps"><div class="dl">${x.l}</div><div class="dv"${x.cl?' style="color:'+x.cl+'"':''}>${x.v}</div></div>`).join('')}
+    </div></div>
+    <div style="margin-bottom:20px"><div class="lbl" style="margin-bottom:8px">Shift Coverage</div>
+      ${["Morning","Day","Night","Filler-4x","Filler-2x"].map(sh=>{const ch=shifts[sh]||[];if(!ch.length&&!["Morning","Day","Night"].includes(sh))return'';return`<div style="display:flex;align-items:center;gap:10px;padding:8px 12px;border-radius:8px;margin-bottom:5px;background:${ch.length?'var(--s1)':'rgba(255,59,92,0.06)'};border:1px solid ${ch.length?'var(--b1)':'rgba(255,59,92,0.15)'}"><span class="sd ${ch.length?'sc':'sg'}"></span><span style="font-size:12px;font-weight:600;width:70px">${sh}</span><div style="flex:1">${ch.length?ch.map(c=>`<span style="cursor:pointer;margin-right:8px;font-size:11px" onclick="event.stopPropagation();openCh(${c.id})">${tb(getTier(c))} <strong>${c.n}</strong> <span style="color:var(--d)">${fmt(c.avgTicket)} avg</span></span>`).join(''):'<span style="color:var(--rd);font-size:11px;font-weight:600">⚠ NO COVERAGE</span>'}</div></div>`}).join('')}
+    </div>
+    <div style="margin-bottom:20px"><div class="lbl" style="margin-bottom:8px">Top Creators (by goal)</div><div class="tw"><table><thead><tr><th>Creator</th><th>Monthly Goal</th></tr></thead><tbody>
+      ${topCreators.map(c=>`<tr><td style="font-weight:600;color:${TC[team]}">${c.n}</td><td style="font-family:var(--mn)">${fmt(c.g)}</td></tr>`).join('')}
+      ${creators.length>10?`<tr><td colspan="2" style="color:var(--d);font-size:11px">+ ${creators.length-10} more creators</td></tr>`:''}
+    </tbody></table></div></div>
+    <div style="margin-bottom:20px"><div class="lbl" style="margin-bottom:8px">Chatters</div><div class="tw"><table><thead><tr><th>Chatter</th><th>Shift</th><th>March $</th><th>Ticket</th><th>Goal</th><th>Tier</th></tr></thead><tbody>
+      ${chatters.sort((a,b)=>b.tot-a.tot).map(c=>`<tr onclick="openCh(${c.id})"><td style="font-weight:600">${c.n}</td><td style="font-size:11px;color:var(--m)">${c.shift}</td><td style="font-family:var(--mn);font-weight:700">${fmt(c.tot)}</td><td style="font-family:var(--mn);color:${c.avgTicket>=35?'var(--gn)':c.avgTicket<25?'var(--rd)':''}">${fmt(c.avgTicket)}</td><td style="font-family:var(--mn);font-size:11px">${fmt(c.goal)}</td><td>${tb(getTier(c))}</td></tr>`).join('')}
+    </tbody></table></div></div>
+    ${gaps.length?`<div style="padding:12px;border-radius:10px;border-left:3px solid var(--rd);background:rgba(255,59,92,0.06);font-size:12px;color:var(--m)">⚠ <strong>${gaps.join(', ')}</strong> shift${gaps.length>1?'s':''} uncovered = revenue gap. Assign a chatter ASAP.</div>`:''} 
+  `;
+}
+
+/* ═══ RENDER ═══ */
+function render(){
+  const active=D.filter(c=>c.st==="Active");const tiers={star:0,solid:0,watch:0,critical:0};D.forEach(c=>tiers[getTier(c)]++);
+  const avgT=active.reduce((s,c)=>s+c.avgTicket,0)/active.length;
+  const byTk=[...active].sort((a,b)=>b.avgTicket-a.avgTicket);
+  const recovery=active.filter(c=>c.avgTicket<30).reduce((s,c)=>(35-c.avgTicket)*c.sales*0.5,0);
+  const store=gS();const tasks=gT();const pending=tasks.filter(t=>!t.done);
+
+  // Alerts
+  const al=[];
+  if(pending.filter(t=>t.pri==='urgent').length)al.push({text:`${pending.filter(t=>t.pri==='urgent').length} urgent tasks`,c:'var(--rd)',tab:'tasks'});
+  if(D.filter(c=>getAct(c).u<=1).length)al.push({text:`${D.filter(c=>getAct(c).u<=1).length} chatters flagged for termination`,c:'var(--or)',tab:'actions'});
+  // Team 5 night gap
+  if(!D.some(c=>c.team==="Team 5"&&c.shift==="Night"&&c.st==="Active"))al.push({text:'Team 5 has NO night shift coverage',c:'var(--rd)',tab:'creators'});
+  document.getElementById('alerts').innerHTML=al.map(a=>`<div class="alert-bar" style="background:${a.c}08;border:1px solid ${a.c}20" onclick="switchTab('${a.tab}')"><span class="ap" style="background:${a.c}"></span><span style="font-size:13px;font-weight:600;color:${a.c}">${a.text}</span><span style="font-size:11px;color:var(--d);margin-left:auto">→</span></div>`).join('');
+
+  document.getElementById('tbar').innerHTML=TABS.map(t=>`<button class="tb${tab===t.id?' on':''}" onclick="switchTab('${t.id}')">${t.l}${t.id==='tasks'&&pending.length?`<span class="nf">${pending.length}</span>`:''}</button>`).join('');
+
+  // Team summaries
+  const teams=["Team 1","Team 2","Team 3","Team 4","Team 5","Team 6","Team 7"].map(t=>{
+    const cr=CR.filter(c=>c.t===t);const ch=D.filter(c=>c.st==="Active"&&c.team===t);
+    const goal=TEAM_GOALS[t]||0;const sales=ch.reduce((s,c)=>s+c.tot,0);
+    const gaps=["Morning","Day","Night"].filter(sh=>!ch.some(c=>c.shift===sh));
+    return{team:t,creators:cr.length,chatters:ch.length,goal,sales,gaps,chatterList:ch};
+  });
+
+  /* OVERVIEW */
+  document.getElementById('t-overview').innerHTML=`
+    <div class="kg">${[{l:"March Running",v:fmt(ME.mr),s:(ME.mr/ME.mg*100).toFixed(1)+"% to goal · "+(ME.mr/ME.feb*100).toFixed(1)+"% vs Feb",c:"var(--pk)",ck:"switchTab('heatmap')"},{l:"Projected",v:fmt(ME.mp),s:"Gap: "+fI(ME.mg-ME.mp)+" to $170k",c:"var(--or)"},{l:"Today (3/31)",v:fmt(ME.td),s:ME.tc+" sales · click for breakdown",c:"var(--tl)",ck:"openDay(31)"},{l:"Yesterday",v:fmt(ME.yd),s:ME.yc+" sales · click for breakdown",c:"var(--am)",ck:"openDay(30)"},{l:"Avg Ticket",v:fmt(avgT),s:"Target $35",c:"var(--pu)",ck:"switchTab('pricing')"},{l:"Recovery",v:"~"+fI(recovery)+"/mo",s:"Bottom half → $35",c:"var(--gn)",ck:"switchTab('optimize')"},{l:"Tasks",v:pending.length,s:pending.filter(t=>t.pri==='urgent').length+" urgent",c:"var(--rd)",ck:"switchTab('tasks')"},{l:"Chatters",v:active.length+" / "+D.length,s:(D.length-active.length)+" PTO",c:"var(--bl)",ck:"switchTab('chatters')"}].map(k=>`<div class="card kpi" onclick="${k.ck||''}"><div class="lbl">${k.l}</div><div class="kv" style="color:${k.c}">${k.v}</div><div class="ks">${k.s}</div></div>`).join('')}</div>
+    <div class="lbl" style="margin-bottom:12px">Teams — Click for full breakdown</div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:14px;margin-bottom:24px">
+      ${teams.map(t=>`<div class="card cc" onclick="openTeam('${t.team}')" style="border-top:3px solid ${TC[t.team]}">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px"><span style="font-weight:700;font-size:16px;color:${TC[t.team]}">${t.team}</span><span style="font-size:10px;color:var(--d)">${t.creators} creators · ${t.chatters} chatters</span></div>
+        <div style="display:flex;gap:14px;margin-bottom:8px">
+          <div><div style="font-size:9px;color:var(--d)">Chatter Sales</div><div style="font-size:18px;font-weight:700;font-family:var(--mn);color:${TC[t.team]}">${fK(t.sales)}</div></div>
+          <div><div style="font-size:9px;color:var(--d)">Creator Goals Total</div><div style="font-size:13px;font-weight:600;font-family:var(--mn)">${fK(t.goal)}</div></div>
+        </div>
+        <div style="display:flex;gap:6px;align-items:center;margin-bottom:4px">${["Mor","Day","Ngt"].map((sh,i)=>{const f=["Morning","Day","Night"][i];const has=t.chatterList.some(c=>c.shift===f);return`<span class="sd ${has?'sc':'sg'}"></span><span style="font-size:8px;color:${has?'var(--d)':'var(--rd)'}">${sh}</span>`}).join('')}</div>
+        ${t.gaps.length?`<div style="font-size:10px;color:var(--rd);font-weight:600">⚠ ${t.gaps.join(', ')} gap</div>`:''}
+        <div style="display:flex;gap:3px;flex-wrap:wrap;margin-top:6px">${t.chatterList.sort((a,b)=>b.tot-a.tot).map(c=>{const cols={star:'var(--gn)',solid:'var(--tl)',watch:'var(--am)',critical:'var(--rd)'};return`<span style="padding:1px 5px;border-radius:3px;font-size:8px;background:${cols[getTier(c)]}12;color:${cols[getTier(c)]};cursor:pointer" onclick="event.stopPropagation();openCh(${c.id})">${c.n.split(' ')[0]}</span>`}).join('')}</div>
+      </div>`).join('')}
+    </div>
+    <div class="g2"><div class="card" style="padding:20px"><div class="lbl" style="margin-bottom:12px">Daily Revenue</div><div style="display:flex;align-items:flex-end;gap:3px;height:120px">${MD.map(d=>{const mx=Math.max(...MD.map(x=>x.s));const h=Math.max((d.s/mx)*110,2);const bg=d.d===26?'linear-gradient(180deg,var(--pk),var(--or))':d.s>ME.dg?'rgba(0,229,155,0.5)':'rgba(255,255,255,0.08)';return`<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px"><div style="width:100%;height:${h}px;border-radius:3px;background:${bg}" title="Mar ${d.d}: ${fmt(d.s)}"></div>${d.d%7===1||d.d===26?`<div style="font-size:7px;color:var(--d);font-family:var(--mn)">${d.d}</div>`:''}</div>`}).join('')}</div></div>
+    <div class="card" style="padding:20px"><div class="lbl" style="margin-bottom:12px">Tiers</div><div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">${Object.entries(tiers).map(([t,n])=>{const cl={star:"var(--gn)",solid:"var(--tl)",watch:"var(--am)",critical:"var(--rd)"};return`<div style="padding:12px;border-radius:10px;background:${cl[t]}08;border:1px solid ${cl[t]}15;cursor:pointer" onclick="ftr='${t}';switchTab('chatters')"><div style="font-size:28px;font-weight:800;font-family:var(--mn);color:${cl[t]};line-height:1">${n}</div><div style="font-size:10px;font-weight:700;color:${cl[t]};letter-spacing:1px;margin-top:3px">${t.toUpperCase()}</div></div>`}).join('')}</div></div></div>
+  `;
+
+  /* CREATORS */
+  let crList=[...CR];if(crFilter!=="all")crList=crList.filter(c=>c.t===crFilter);
+  document.getElementById('t-creators').innerHTML=`
+    <div style="display:flex;gap:8px;margin-bottom:16px;align-items:center;flex-wrap:wrap"><span class="lbl">All ${CR.length} Creators</span>
+    <select class="fsel" onchange="crFilter=this.value;render()"><option value="all">All Teams</option>${["Team 1","Team 2","Team 3","Team 4","Team 5","Team 6","Team 7"].map(t=>`<option value="${t}" ${crFilter===t?"selected":""}>${t}</option>`).join('')}</select>
+    <span style="font-size:11px;color:var(--d);margin-left:auto">${crList.length} creators · Click team name for full breakdown</span></div>
+    <div class="tw"><table><thead><tr><th>Creator</th><th>Team</th><th class="s" onclick="doSort('g')">Monthly Goal</th><th>Status</th></tr></thead><tbody>
+      ${crList.sort((a,b)=>b.g-a.g).map(c=>`<tr onclick="openTeam('${c.t}')"><td style="font-weight:600">${c.n}</td><td><span style="color:${TC[c.t]};font-weight:600">${c.t}</span></td><td style="font-family:var(--mn);font-weight:700">${fmt(c.g)}</td><td style="font-size:11px;color:var(--gn)">Active</td></tr>`).join('')}
+    </tbody></table></div>
+  `;
+
+  /* CHATTERS */
+  let list=[...D];if(ftm!=="all")list=list.filter(c=>c.team===ftm);if(ftr!=="all")list=list.filter(c=>getTier(c)===ftr);
+  list.sort((a,b)=>{if(sk==="n")return sd==="desc"?b.n.localeCompare(a.n):a.n.localeCompare(b.n);return sd==="desc"?(b[sk]||0)-(a[sk]||0):(a[sk]||0)-(b[sk]||0)});
+  const ar=k=>sk===k?(sd==="desc"?"▼":"▲"):"";
+  document.getElementById('t-chatters').innerHTML=`<div style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap;align-items:center"><span class="lbl">Filters</span><select class="fsel" onchange="ftm=this.value;render()"><option value="all">All Teams</option>${["Team 1","Team 2","Team 3","Team 4","Team 5","Team 6","Team 7"].map(t=>`<option value="${t}" ${ftm===t?"selected":""}>${t}</option>`).join('')}</select><select class="fsel" onchange="ftr=this.value;render()"><option value="all">All Tiers</option>${["star","solid","watch","critical"].map(t=>`<option value="${t}" ${ftr===t?"selected":""}>${t[0].toUpperCase()+t.slice(1)}</option>`).join('')}</select><span style="font-size:11px;color:var(--d);margin-left:auto">${list.length} chatters</span></div>
+  <div class="tw"><table><thead><tr><th>#</th><th class="s" onclick="doSort('n')">Chatter ${ar('n')}</th><th>Team</th><th>Shift</th><th class="s" onclick="doSort('tot')">March $ ${ar('tot')}</th><th class="s" onclick="doSort('avgTicket')">Ticket ${ar('avgTicket')}</th><th class="s" onclick="doSort('goal')">Goal ${ar('goal')}</th><th>% Goal</th><th>Mom.</th><th>Tier</th><th>Decision</th><th>Status</th></tr></thead><tbody>${list.map((c,i)=>{const t=getTier(c),a=getAct(c),cs=store[c.id];const stH=cs&&cs.status?`<span class="si ${cs.status.includes('Fired')?'si-r':cs.status.includes('Coaching')||cs.status.includes('Move')?'si-a':'si-p'}">${cs.status}</span>`:'';return`<tr onclick="openCh(${c.id})"><td style="font-family:var(--mn);color:var(--d);font-size:10px">${i+1}</td><td style="font-weight:600;font-size:12px"><span style="color:${c.momentum>=1?'var(--gn)':c.momentum<0.7?'var(--rd)':'var(--am)'};font-size:10px">${c.momentum>=1?'▲':c.momentum<0.7?'▼':'—'}</span> ${c.n}</td><td><span style="color:${TC[c.team]||'var(--d)'};font-size:11px;font-weight:600">${c.team}</span></td><td style="font-size:11px;color:var(--m)">${c.shift}</td><td style="font-family:var(--mn);font-weight:700">${fmt(c.tot)}</td><td style="font-family:var(--mn);font-size:11px;color:${c.avgTicket>=40?'var(--gn)':c.avgTicket<25?'var(--rd)':''}">${fmt(c.avgTicket)}</td><td style="font-family:var(--mn);font-size:11px">${fK(c.goal)}</td><td style="font-family:var(--mn);font-size:11px;color:${c.pctGoal>=80?'var(--gn)':c.pctGoal>=50?'var(--am)':'var(--rd)'}">${c.pctGoal.toFixed(0)}%</td><td style="font-family:var(--mn);font-size:10px;color:${c.momentum>=1?'var(--gn)':c.momentum<0.7?'var(--rd)':'var(--am)'}">${((c.momentum-1)*100).toFixed(0)}%</td><td>${tb(t)}</td><td>${ab(a)}</td><td>${stH}</td></tr>`}).join('')}</tbody></table></div>`;
+
+  /* PRICING */
+  const mxTk=Math.max(...byTk.map(c=>c.avgTicket));
+  document.getElementById('t-pricing').innerHTML=`<div class="card" style="padding:20px;border-left:3px solid var(--rd);margin-bottom:20px"><div style="font-size:14px;font-weight:700;color:var(--rd);margin-bottom:6px">Average Ticket Gap</div><p style="font-size:12px;color:var(--m)">Top: <strong style="color:var(--gn)">${fmt(mxTk)}</strong> · Bottom 6: <strong style="color:var(--rd)">${fmt(byTk.slice(-6).reduce((s,c)=>s+c.avgTicket,0)/6)}</strong> · Recovery: <strong style="color:var(--gn)">+${fI(recovery)}/mo</strong></p></div><div class="card" style="padding:20px">${byTk.map((c,i)=>{const w=(c.avgTicket/mxTk)*100;const col=c.avgTicket>=40?'var(--gn)':c.avgTicket>=30?'var(--tl)':c.avgTicket>=25?'var(--am)':'var(--rd)';return`<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;cursor:pointer;padding:3px 0;border-radius:6px" onclick="openCh(${c.id})"><div style="width:18px;font-size:10px;color:var(--d);font-family:var(--mn);text-align:right">${i+1}</div><div style="font-size:11px;width:160px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:${col};font-weight:${i<3?700:500}">${c.n}</div><div style="flex:1;height:6px;background:rgba(255,255,255,0.04);border-radius:3px;overflow:hidden"><div style="width:${w}%;height:100%;background:${col};border-radius:3px"></div></div><div style="width:65px;font-size:11px;font-family:var(--mn);text-align:right;color:${col};font-weight:700">${fmt(c.avgTicket)}</div>${tb(getTier(c))}</div>`}).join('')}</div>`;
+
+  /* ACTIONS */
+  const aL=D.map(c=>({c,...getAct(c)})).filter(a=>a.u<6).sort((a,b)=>a.u-b.u);
+  document.getElementById('t-actions').innerHTML=`<div class="lbl" style="margin-bottom:4px">${aL.filter(a=>a.u<=3).length} Urgent</div><p style="font-size:12px;color:var(--d);margin-bottom:20px">Click to take action.</p>${aL.map(a=>{const c=a.c,t=getTier(c),cs=store[c.id];const stH=cs&&cs.status?` <span class="si ${cs.status.includes('Fired')?'si-r':cs.status.includes('Coaching')||cs.status.includes('Move')?'si-a':'si-p'}">${cs.status}</span>`:'';return`<div class="card" style="padding:14px 18px;margin-bottom:10px;border-left:3px solid ${a.cl};cursor:pointer" onclick="openCh(${c.id})"><div style="display:flex;align-items:flex-start;gap:12px;flex-wrap:wrap"><div style="min-width:100px">${ab(a)}${stH}</div><div style="flex:1;min-width:180px"><div style="font-weight:700;font-size:13px">${c.n}</div><div style="font-size:11px;color:var(--d)">${c.team} · ${c.shift}</div><div style="font-size:12px;color:var(--m);margin-top:3px">${a.d}</div></div><div style="display:flex;gap:14px">${[{l:"March",v:fmt(c.tot)},{l:"Ticket",v:fmt(c.avgTicket),cl:c.avgTicket<25?'var(--rd)':''},{l:"% Goal",v:c.pctGoal.toFixed(0)+"%",cl:c.pctGoal<50?'var(--rd)':''}].map(x=>`<div><div style="font-size:9px;color:var(--d)">${x.l}</div><div style="font-size:11px;font-family:var(--mn);font-weight:600${x.cl?';color:'+x.cl:''}">${x.v}</div></div>`).join('')}</div>${tb(t)}</div></div>`}).join('')}<div style="margin:24px 0 12px;border-top:1px solid var(--b1)"></div><div class="lbl" style="margin-bottom:10px">★ Stars</div><div style="display:flex;gap:10px;flex-wrap:wrap">${D.filter(c=>getTier(c)==="star").sort((a,b)=>b.tot-a.tot).map(c=>`<div class="card" style="padding:14px;flex:1 1 200px;max-width:240px;border-top:2px solid var(--gn);cursor:pointer" onclick="openCh(${c.id})"><div style="font-weight:700;font-size:13px">${c.n}</div><div style="font-size:10px;color:var(--d)">${c.team} · ${c.shift}</div><div style="font-size:16px;font-weight:700;font-family:var(--mn);color:var(--gn);margin-top:4px">${fK(c.tot)}</div></div>`).join('')}</div>`;
+
+  /* TASKS */
+  document.getElementById('t-tasks').innerHTML=`
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;flex-wrap:wrap;gap:8px"><div><div class="lbl">Task Board</div><p style="font-size:12px;color:var(--d);margin-top:4px">${pending.length} pending · ${tasks.filter(t=>t.done).length} done</p></div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap"><input class="fsel" id="nti" placeholder="Add task..." style="width:220px" onkeydown="if(event.key==='Enter'){addTask(this.value,document.getElementById('ntp').value);this.value=''}"><select class="fsel" id="ntp"><option value="urgent">🔴 Urgent</option><option value="high">🟠 High</option><option value="medium" selected>🟡 Medium</option></select><button class="abtn a-note" onclick="const i=document.getElementById('nti');if(i.value.trim()){addTask(i.value.trim(),document.getElementById('ntp').value);i.value=''}">+ Add</button></div></div>
+    ${pending.length?`<div class="lbl" style="margin-bottom:8px">Pending</div>${pending.sort((a,b)=>{const p={urgent:0,high:1,medium:2};return(p[a.pri]||2)-(p[b.pri]||2)}).map(t=>{const c=t.cid?D.find(x=>x.id===t.cid):null;return`<div class="task-card" style="border-left:3px solid ${t.pri==='urgent'?'var(--rd)':t.pri==='high'?'var(--or)':'var(--am)'}"><div style="display:flex;align-items:flex-start;gap:12px"><div class="task-check" onclick="togTask(${t.id})"></div><div style="flex:1"><div style="font-size:13px;font-weight:600">${t.text}</div><div style="font-size:10px;color:var(--d);margin-top:3px">${t.by} · ${t.created}${c?` · <span style="cursor:pointer;color:var(--pk)" onclick="event.stopPropagation();openCh(${c.id})">${c.n}</span>`:''}</div>${t.updates.length?`<div style="margin-top:6px;padding-left:12px;border-left:2px solid var(--b1)">${t.updates.map(u=>`<div style="font-size:11px;margin-bottom:3px"><span style="color:var(--d)">${u.by}:</span> <span style="color:var(--m)">${u.text}</span></div>`).join('')}</div>`:''}<div style="margin-top:6px;display:flex;gap:6px"><input class="fsel" id="tu${t.id}" placeholder="Update..." style="flex:1;font-size:10px;padding:4px 8px" onkeydown="if(event.key==='Enter'&&this.value.trim()){addTU(${t.id},this.value.trim());this.value=''}"><button style="background:none;border:1px solid var(--b2);border-radius:6px;color:var(--d);font-size:10px;padding:3px 8px;cursor:pointer;font-family:var(--ff)" onclick="const i=document.getElementById('tu${t.id}');if(i.value.trim()){addTU(${t.id},i.value.trim());i.value=''}">Post</button></div></div>${isA()?`<button class="del-btn" onclick="delTask(${t.id})">✕</button>`:''}</div></div>`}).join('')}`:'<div class="card" style="padding:30px;text-align:center;color:var(--d)">No pending tasks</div>'}
+    ${tasks.filter(t=>t.done).length?`<div class="lbl" style="margin:20px 0 8px">Done</div>${tasks.filter(t=>t.done).slice(0,10).map(t=>`<div class="task-card" style="opacity:.5;border-left:3px solid var(--gn)"><div style="display:flex;align-items:center;gap:12px"><div class="task-check checked" onclick="togTask(${t.id})">✓</div><div style="flex:1;text-decoration:line-through;font-size:13px">${t.text}</div>${isA()?`<button class="del-btn" onclick="delTask(${t.id})">✕</button>`:''}</div></div>`).join('')}`:''}
+  `;
+
+  /* ═══ OPTIMIZE — THE BRAIN ═══ */
+  const TV={"Team 2":100,"Team 4":80,"Team 1":65,"Team 3":65,"Team 5":55,"Team 6":40,"Team 7":40};
+  const TCN={"Team 1":"leahsylvander, AlexaWoods","Team 2":"Danielladay (#1 EARNER)","Team 3":"LizHolland, TheMandyRhea","Team 4":"Angiefaith (RISING STAR)","Team 5":"DaisyBlake, Sammyskye","Team 6":"BrookeStacy, Maddiejones","Team 7":"bellareid, devingirl"};
+
+  // Power-rank every chatter
+  const ranked=[...active].sort((a,b)=>b.avgTicket*0.6+b.tot*0.0004-(a.avgTicket*0.6+a.tot*0.0004));
+  ranked.forEach((c,i)=>c.powerRank=i+1);
+
+  // Build team roster map
+  const roster={};active.forEach(c=>{if(!roster[c.team])roster[c.team]={Morning:null,Day:null,Night:null,Fillers:[]};if(c.shift.includes('Filler'))roster[c.team].Fillers.push(c);else roster[c.team][c.shift]=c});
+
+  // ═══ ANALYSIS CATEGORIES ═══
+  const moves=[];
+  const terminations=[];
+  const shiftFills=[];
+  const coachList=[];
+  const swaps=[];
+
+  // 1. TERMINATIONS — who must go and what happens to their slot
+  active.forEach(c=>{
+    const a=getAct(c);
+    if(a.y!=='terminate')return;
+    const tv=TV[c.team]||40;
+    // Find best replacement: someone on a lower-value team, same shift, better performance
+    const replacements=active.filter(x=>x.id!==c.id&&x.shift===c.shift&&TV[x.team]<tv&&getTier(x)!=='critical').sort((a,b)=>b.avgTicket-a.avgTicket);
+    // Also check fillers who could take this shift
+    const fillerCandidates=active.filter(x=>x.id!==c.id&&x.shift.includes('Filler')&&getTier(x)!=='critical').sort((a,b)=>b.avgTicket-a.avgTicket);
+    terminations.push({chatter:c,team:c.team,shift:c.shift,creator:TCN[c.team],replacements:replacements.slice(0,3),fillerCandidates:fillerCandidates.slice(0,2),reason:a.d,revenue:c.tot,avgTicket:c.avgTicket});
+  });
+
+  // 2. CRITICAL ON HIGH-VALUE PAGES — must move down or replace
+  active.forEach(c=>{
+    const t=getTier(c);const tv=TV[c.team]||40;
+    if(t==='critical'&&tv>=60&&!terminations.find(x=>x.chatter.id===c.id)){
+      const lowerTeam=Object.entries(TV).filter(([t2,v])=>v<tv).sort((a,b)=>a[1]-b[1])[0];
+      moves.push({chatter:c,type:'step-down',priority:0,from:c.team,to:lowerTeam?lowerTeam[0]:'Bench',fromCreator:TCN[c.team],toCreator:lowerTeam?TCN[lowerTeam[0]]:'Remove',reason:c.n+' is CRITICAL tier ('+fmt(c.avgTicket)+' avg ticket, '+fmt(c.tot)+' March total) managing '+TCN[c.team]+'. Every shift on this high-value page is bleeding revenue. A $30+ avg ticket chatter in this slot would generate significantly more.',impact:'Recovering this slot: +$1,500-$3,000/mo',urgency:'URGENT'});
+    }
+  });
+
+  // 3. WATCH CHATTERS ON HIGH PAGES — declining, need to step down
+  active.forEach(c=>{
+    const t=getTier(c);const tv=TV[c.team]||40;
+    if(t==='watch'&&c.momentum<0.7&&tv>=60&&!moves.find(x=>x.chatter.id===c.id)){
+      const midTeam=Object.entries(TV).filter(([t2,v])=>v>=40&&v<tv).sort((a,b)=>b[1]-a[1])[0];
+      moves.push({chatter:c,type:'step-down',priority:1,from:c.team,to:midTeam?midTeam[0]:c.team,fromCreator:TCN[c.team],toCreator:midTeam?TCN[midTeam[0]]:'Monitor',reason:c.n+' has declining momentum ('+((c.momentum-1)*100).toFixed(0)+'%) on '+c.team+' ('+TCN[c.team]+'). Performance is trending down. Move to a mid-tier page to rebuild or replace with a stronger chatter.',impact:'Frees high-value slot: +$500-$1,500/mo',urgency:'HIGH'});
+    }
+  });
+
+  // 4. STARS ON LOW-VALUE PAGES — wasting talent
+  active.forEach(c=>{
+    const t=getTier(c);const tv=TV[c.team]||40;
+    if((t==='star'||t==='solid'&&c.avgTicket>=35)&&tv<=45){
+      // Find highest-value team that has a gap or a weak chatter in same shift
+      const targets=Object.entries(TV).filter(([t2,v])=>{
+        if(v<=tv)return false;
+        const r=roster[t2];
+        if(!r)return false;
+        const currentInSlot=r[c.shift];
+        if(!currentInSlot)return true;// Empty slot
+        if(getTier(currentInSlot)==='critical'||getTier(currentInSlot)==='watch')return true;// Weak chatter
+        return false;
+      }).sort((a,b)=>b[1]-a[1]);
+      if(targets.length){
+        const best=targets[0];
+        const currentOccupant=roster[best[0]]?roster[best[0]][c.shift]:null;
+        moves.push({chatter:c,type:'move-up',priority:1,from:c.team,to:best[0],fromCreator:TCN[c.team],toCreator:TCN[best[0]],reason:c.n+' is a '+t.toUpperCase()+' performer ('+fmt(c.avgTicket)+' avg ticket, #'+c.powerRank+' power rank) stuck on '+c.team+' ('+TCN[c.team]+'). Moving to '+best[0]+' ('+TCN[best[0]]+') '+(currentOccupant?'replaces '+currentOccupant.n+' ('+getTier(currentOccupant)+' tier, '+fmt(currentOccupant.avgTicket)+' avg)':'fills an empty '+c.shift+' slot')+'. Their closing skills will generate far more revenue on higher-value creators.',impact:'+$2,000-$4,000/mo on higher-value page',urgency:'HIGH',displaces:currentOccupant});
+      }
+    }
+  });
+
+  // 5. SOLID PERFORMERS WHO COULD MOVE UP — not stars but growing
+  active.forEach(c=>{
+    const t=getTier(c);const tv=TV[c.team]||40;
+    if(t==='solid'&&c.momentum>1.0&&c.avgTicket>=28&&tv<=50&&!moves.find(x=>x.chatter.id===c.id)){
+      const targets=Object.entries(TV).filter(([t2,v])=>v>tv&&v<=70).sort((a,b)=>b[1]-a[1]);
+      const openTarget=targets.find(([t2])=>{const r=roster[t2];return r&&!r[c.shift]});
+      if(openTarget){
+        moves.push({chatter:c,type:'promote',priority:2,from:c.team,to:openTarget[0],fromCreator:TCN[c.team],toCreator:TCN[openTarget[0]],reason:c.n+' is solid with positive momentum (+'+((c.momentum-1)*100).toFixed(0)+'%) and a decent avg ticket ('+fmt(c.avgTicket)+'). '+openTarget[0]+' has an open '+c.shift+' slot on '+TCN[openTarget[0]]+'. Good opportunity to test them on a higher-value page.',impact:'+$500-$1,500/mo potential upside',urgency:'MEDIUM'});
+      }
+    }
+  });
+
+  // 6. SPECIFIC SWAPS — direct 1-for-1 trades that improve both teams
+  active.forEach(c1=>{
+    const t1=getTier(c1);const tv1=TV[c1.team]||40;
+    if(t1!=='star'&&t1!=='critical')return;// Only swap extremes
+    active.forEach(c2=>{
+      if(c2.id<=c1.id||c2.shift!==c1.shift)return;
+      const t2=getTier(c2);const tv2=TV[c2.team]||40;
+      // Star on low page + critical on high page = swap
+      if(t1==='star'&&tv1<50&&t2==='critical'&&tv2>=60){
+        if(!swaps.find(s=>s.a.id===c1.id||s.b.id===c1.id)){
+          swaps.push({a:c1,b:c2,reason:c1.n+' (STAR, '+fmt(c1.avgTicket)+' avg) is on '+c1.team+' (value: '+tv1+') while '+c2.n+' (CRITICAL, '+fmt(c2.avgTicket)+' avg) is on '+c2.team+' (value: '+tv2+'). Direct swap puts the stronger chatter where they generate more revenue.',impact:'Net +$2,000-$4,000/mo from better allocation'});
+        }
+      }
+    });
+  });
+
+  // 7. SHIFT GAPS on all teams
+  const gaps=[];
+  Object.entries(TV).sort((a,b)=>b[1]-a[1]).forEach(([team,val])=>{
+    ['Morning','Day','Night'].forEach(shift=>{
+      if(active.some(c=>c.team===team&&c.shift===shift))return;
+      // Find candidates
+      const cands=active.filter(c=>c.shift===shift&&TV[c.team]<val&&(getTier(c)==='star'||getTier(c)==='solid')).sort((a,b)=>b.avgTicket-a.avgTicket).slice(0,3);
+      const fillerCands=active.filter(c=>c.shift.includes('Filler')&&TV[c.team]<=val&&getTier(c)!=='critical').sort((a,b)=>b.avgTicket-a.avgTicket).slice(0,2);
+      gaps.push({team,shift,val,creator:TCN[team],candidates:cands,fillers:fillerCands,isHighValue:val>=60});
+    });
+  });
+
+  // 8. COACHING targets
+  active.forEach(c=>{
+    const t=getTier(c);
+    if(c.avgTicket<28&&t!=='critical'){
+      const mentor=active.filter(x=>x.team!==c.team&&x.avgTicket>=40).sort((a,b)=>b.avgTicket-a.avgTicket)[0];
+      coachList.push({chatter:c,avgTicket:c.avgTicket,potential:(35-c.avgTicket)*c.sales*0.5,mentor:mentor||null});
+    }
+  });
+
+  const totalMoves=terminations.length+moves.length+swaps.length+gaps.filter(g=>g.isHighValue).length;
+  const totalRecovery=terminations.length*1500+moves.filter(m=>m.type==='move-up').length*3000+moves.filter(m=>m.type==='step-down').length*1500+gaps.filter(g=>g.isHighValue).length*2000+recovery;
+  const optScore=Math.max(0,Math.min(100,100-terminations.length*8-moves.length*5-gaps.filter(g=>g.isHighValue).length*10-swaps.length*6));
+
+  document.getElementById('t-optimize').innerHTML=`
+    <!-- HEADER -->
+    <div class="card" style="padding:24px;margin-bottom:20px;border-left:3px solid var(--pk)">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:16px">
+        <div>
+          <div style="font-size:20px;font-weight:800;background:linear-gradient(135deg,var(--or),var(--pk));-webkit-background-clip:text;-webkit-text-fill-color:transparent">Operations Optimizer</div>
+          <div style="font-size:13px;color:var(--m);margin-top:4px">Full analysis of every chatter-to-page allocation. ${totalMoves} changes recommended.</div>
+        </div>
+        <div style="display:flex;gap:16px;flex-wrap:wrap">
+          <div style="text-align:center;padding:12px 20px;border-radius:12px;background:${optScore>=60?'rgba(0,229,155,0.06)':optScore>=40?'rgba(255,179,71,0.06)':'rgba(255,59,92,0.06)'};border:1px solid ${optScore>=60?'rgba(0,229,155,0.15)':optScore>=40?'rgba(255,179,71,0.15)':'rgba(255,59,92,0.15)'}">
+            <div style="font-size:10px;color:var(--d)">Optimization</div>
+            <div style="font-size:32px;font-weight:800;font-family:var(--mn);color:${optScore>=60?'var(--gn)':optScore>=40?'var(--am)':'var(--rd)'}">${optScore}%</div>
+          </div>
+          <div style="text-align:center;padding:12px 20px;border-radius:12px;background:rgba(0,229,155,0.06);border:1px solid rgba(0,229,155,0.15)">
+            <div style="font-size:10px;color:var(--d)">Est. Recovery</div>
+            <div style="font-size:20px;font-weight:800;font-family:var(--mn);color:var(--gn)">+${fI(totalRecovery)}/mo</div>
+          </div>
+        </div>
+      </div>
+      <div style="display:flex;gap:12px;margin-top:16px;flex-wrap:wrap">
+        <div style="padding:8px 14px;border-radius:8px;background:rgba(255,59,92,0.08);font-size:12px"><span style="color:var(--rd);font-weight:700">${terminations.length}</span> <span style="color:var(--d)">Terminate</span></div>
+        <div style="padding:8px 14px;border-radius:8px;background:rgba(255,107,53,0.08);font-size:12px"><span style="color:var(--or);font-weight:700">${moves.filter(m=>m.type==='step-down').length}</span> <span style="color:var(--d)">Step Down</span></div>
+        <div style="padding:8px 14px;border-radius:8px;background:rgba(0,229,155,0.08);font-size:12px"><span style="color:var(--gn);font-weight:700">${moves.filter(m=>m.type==='move-up'||m.type==='promote').length}</span> <span style="color:var(--d)">Move Up</span></div>
+        <div style="padding:8px 14px;border-radius:8px;background:rgba(255,60,172,0.08);font-size:12px"><span style="color:var(--pk);font-weight:700">${swaps.length}</span> <span style="color:var(--d)">Swaps</span></div>
+        <div style="padding:8px 14px;border-radius:8px;background:rgba(167,139,250,0.08);font-size:12px"><span style="color:var(--pu);font-weight:700">${gaps.filter(g=>g.isHighValue).length}</span> <span style="color:var(--d)">Critical Gaps</span></div>
+        <div style="padding:8px 14px;border-radius:8px;background:rgba(78,205,196,0.08);font-size:12px"><span style="color:var(--tl);font-weight:700">${coachList.length}</span> <span style="color:var(--d)">Need Coaching</span></div>
+      </div>
+    </div>
+
+    <!-- ═══ SECTION 1: TERMINATION & REPLACEMENT PLANS ═══ -->
+    ${terminations.length?`
+    <div class="lbl" style="margin-bottom:6px;color:var(--rd)">1. Termination & Replacement Plans (${terminations.length})</div>
+    <div style="font-size:12px;color:var(--d);margin-bottom:16px">These chatters are not recoverable. Each card shows who should replace them and where.</div>
+    ${terminations.map(t=>`
+      <div class="card" style="padding:20px;margin-bottom:12px;border-left:3px solid var(--rd)">
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;flex-wrap:wrap">
+          <span class="ab" style="background:var(--rd)15;color:var(--rd)">🔥 TERMINATE</span>
+          <span style="font-weight:700;font-size:15px;cursor:pointer" onclick="openCh(${t.chatter.id})">${t.chatter.n}</span>
+          ${tb(getTier(t.chatter))}
+          <span style="font-size:11px;color:var(--d)">${t.team} · ${t.shift} · ${fmt(t.avgTicket)} avg · ${fmt(t.revenue)} March</span>
+        </div>
+        <div style="font-size:12px;color:var(--m);margin-bottom:12px">${t.reason}. Currently on <strong style="color:${TC[t.team]}">${t.team}</strong> managing ${t.creator}.</div>
+        <div style="padding:14px;border-radius:10px;background:rgba(255,255,255,0.02);border:1px solid var(--b1);margin-bottom:10px">
+          <div style="font-size:11px;font-weight:700;color:var(--tl);margin-bottom:8px">Replacement candidates for ${t.team} ${t.shift} slot:</div>
+          ${t.replacements.length?t.replacements.map(r=>`
+            <div style="display:flex;align-items:center;gap:10px;padding:8px 12px;border-radius:8px;margin-bottom:4px;background:rgba(78,205,196,0.04);cursor:pointer" onclick="openCh(${r.id})">
+              <span style="font-weight:600">${r.n}</span>
+              <span style="color:${TC[r.team]};font-size:10px">${r.team} ${r.shift}</span>
+              <span style="font-family:var(--mn);font-size:11px;color:var(--gn)">${fmt(r.avgTicket)} avg</span>
+              ${tb(getTier(r))}
+              <span style="font-size:10px;color:var(--d);margin-left:auto">Move from ${r.team} → ${t.team}</span>
+            </div>
+          `).join(''):'<div style="font-size:11px;color:var(--am)">No direct replacement on same shift from lower teams. Consider hiring or moving a filler.</div>'}
+          ${t.fillerCandidates.length?`<div style="font-size:10px;color:var(--d);margin-top:6px">Filler options: ${t.fillerCandidates.map(f=>'<span style="cursor:pointer;color:var(--tl)" onclick="openCh('+f.id+')">'+f.n+' ('+fmt(f.avgTicket)+')</span>').join(', ')}</div>`:''}
+        </div>
+        <button class="abtn a-fire" style="font-size:11px;padding:8px 14px" onclick="addTask('TERMINATE ${t.chatter.n} + find replacement for ${t.team} ${t.shift}','urgent',${t.chatter.id});toast('Task created')">🔥 Create Termination Task</button>
+      </div>
+    `).join('')}
+    `:''}
+
+    <!-- ═══ SECTION 2: CRITICAL SHIFT GAPS ═══ -->
+    ${gaps.filter(g=>g.isHighValue).length?`
+    <div class="lbl" style="margin:24px 0 6px;color:var(--pu)">2. Critical Shift Gaps — Revenue Leaks (${gaps.filter(g=>g.isHighValue).length})</div>
+    <div style="font-size:12px;color:var(--d);margin-bottom:16px">Empty shifts on high-value pages. Every hour uncovered = $0 revenue on your best creators.</div>
+    ${gaps.filter(g=>g.isHighValue).sort((a,b)=>b.val-a.val).map(g=>`
+      <div class="card" style="padding:20px;margin-bottom:12px;border-left:3px solid var(--pu)">
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
+          <span class="ab" style="background:var(--pu)15;color:var(--pu)">⚠ EMPTY SHIFT</span>
+          <span style="font-weight:700;color:${TC[g.team]}">${g.team}</span>
+          <span style="font-weight:700;color:var(--rd)">${g.shift}</span>
+          <span style="font-size:11px;color:var(--d)">${g.creator} · Page value: ${g.val}/100</span>
+        </div>
+        <div style="font-size:12px;color:var(--m);margin-bottom:12px">No chatter covers ${g.shift} on ${g.team}. This means <strong>zero revenue</strong> during ${g.shift} hours on ${g.creator}. ${g.val>=80?'This is your HIGHEST priority — Danielladay generates the most revenue and needs full coverage.':g.val>=60?'High-value page losing significant revenue.':'Moderate impact but still worth filling.'}</div>
+        ${g.candidates.length?`
+          <div style="font-size:11px;font-weight:700;color:var(--gn);margin-bottom:6px">Best candidates to move into this slot:</div>
+          ${g.candidates.map(c=>`
+            <div style="display:flex;align-items:center;gap:10px;padding:8px 12px;border-radius:8px;margin-bottom:4px;background:rgba(0,229,155,0.04);cursor:pointer" onclick="openCh(${c.id})">
+              <span style="font-weight:600">${c.n}</span>
+              <span style="color:${TC[c.team]};font-size:10px">Currently ${c.team}</span>
+              <span style="font-family:var(--mn);font-size:11px;color:var(--gn)">${fmt(c.avgTicket)} avg · ${fmt(c.tot)} March</span>
+              ${tb(getTier(c))}
+            </div>
+          `).join('')}
+        `:'<div style="font-size:11px;color:var(--am)">No strong same-shift candidates. Reassign a filler or hire.</div>'}
+        <button class="abtn a-replace" style="font-size:11px;padding:8px 14px;margin-top:8px" onclick="addTask('Fill ${g.team} ${g.shift} gap — ${g.creator}','urgent',0);toast('Task created')">📋 Create Fill Task</button>
+      </div>
+    `).join('')}
+    `:''}
+
+    <!-- ═══ SECTION 3: CHATTER MOVES ═══ -->
+    ${moves.length?`
+    <div class="lbl" style="margin:24px 0 6px">3. Recommended Chatter Moves (${moves.length})</div>
+    <div style="font-size:12px;color:var(--d);margin-bottom:16px">Move strong chatters up to higher-value pages. Move weak chatters down to lower-pressure pages.</div>
+    ${moves.sort((a,b)=>a.priority-b.priority).map(m=>{
+      const isUp=m.type==='move-up'||m.type==='promote';
+      const col=isUp?'var(--gn)':m.priority===0?'var(--rd)':'var(--or)';
+      const label=m.type==='move-up'?'⬆ MOVE UP':m.type==='promote'?'⬆ PROMOTE':m.type==='step-down'?'⬇ STEP DOWN':'REASSIGN';
+      return`<div class="card" style="padding:20px;margin-bottom:12px;border-left:3px solid ${col}">
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;flex-wrap:wrap">
+          <span class="ab" style="background:${col}15;color:${col}">${label}</span>
+          <span style="font-size:9px;padding:3px 8px;border-radius:4px;background:${m.urgency==='URGENT'?'rgba(255,59,92,0.1)':m.urgency==='HIGH'?'rgba(255,107,53,0.1)':'rgba(255,179,71,0.1)'};color:${m.urgency==='URGENT'?'var(--rd)':m.urgency==='HIGH'?'var(--or)':'var(--am)'};font-weight:700">${m.urgency}</span>
+          <span style="font-weight:700;font-size:15px;cursor:pointer" onclick="openCh(${m.chatter.id})">${m.chatter.n}</span>
+          ${tb(getTier(m.chatter))}
+          <span style="font-size:11px;color:var(--d)">#${m.chatter.powerRank} power rank · ${fmt(m.chatter.avgTicket)} avg ticket</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:16px;padding:14px 20px;border-radius:12px;background:${isUp?'rgba(0,229,155,0.04)':'rgba(255,107,53,0.04)'};border:1px solid ${isUp?'rgba(0,229,155,0.1)':'rgba(255,107,53,0.1)'};margin-bottom:12px">
+          <div style="flex:1;text-align:center"><div style="font-size:10px;color:var(--d)">FROM</div><div style="font-weight:700;font-size:14px;color:var(--or)">${m.from}</div><div style="font-size:10px;color:var(--d)">${m.fromCreator}</div></div>
+          <div style="font-size:24px;color:var(--am)">→</div>
+          <div style="flex:1;text-align:center"><div style="font-size:10px;color:var(--d)">TO</div><div style="font-weight:700;font-size:14px;color:${col}">${m.to}</div><div style="font-size:10px;color:var(--d)">${m.toCreator}</div></div>
+        </div>
+        <div style="font-size:12px;color:var(--m);line-height:1.6;margin-bottom:10px">${m.reason}</div>
+        ${m.displaces?'<div style="font-size:11px;color:var(--am);margin-bottom:8px">Displaces: '+m.displaces.n+' ('+getTier(m.displaces)+', '+fmt(m.displaces.avgTicket)+' avg) — move them to a lower page or bench.</div>':''}
+        <div style="font-size:11px;color:${col};font-weight:600;margin-bottom:10px">Impact: ${m.impact}</div>
+        <button class="abtn a-note" style="font-size:11px;padding:8px 14px" onclick="addTask('${label}: ${m.chatter.n} from ${m.from} to ${m.to}','${m.priority===0?'urgent':'high'}',${m.chatter.id});toast('Task created')">📋 Create Task</button>
+        <button class="abtn a-coach" style="font-size:11px;padding:8px 14px;margin-left:6px" onclick="openCh(${m.chatter.id})">View Profile</button>
+      </div>`;
+    }).join('')}
+    `:''}
+
+    <!-- ═══ SECTION 4: DIRECT SWAPS ═══ -->
+    ${swaps.length?`
+    <div class="lbl" style="margin:24px 0 6px">4. Direct Swaps (${swaps.length})</div>
+    <div style="font-size:12px;color:var(--d);margin-bottom:16px">1-for-1 trades between chatters where both teams benefit.</div>
+    ${swaps.map(s=>`
+      <div class="card" style="padding:20px;margin-bottom:12px;border-left:3px solid var(--pk)">
+        <div style="display:flex;align-items:center;gap:16px;padding:14px 20px;border-radius:12px;background:rgba(255,60,172,0.04);border:1px solid rgba(255,60,172,0.1);margin-bottom:12px">
+          <div style="flex:1;text-align:center;cursor:pointer" onclick="openCh(${s.a.id})">
+            <div style="font-weight:700;font-size:14px">${s.a.n}</div>
+            <div style="font-size:11px;color:${TC[s.a.team]}">${s.a.team} · ${s.a.shift}</div>
+            <div style="font-family:var(--mn);font-size:12px;color:var(--gn)">${fmt(s.a.avgTicket)} avg</div>
+            ${tb(getTier(s.a))}
+          </div>
+          <div style="font-size:24px;color:var(--pk)">⇄</div>
+          <div style="flex:1;text-align:center;cursor:pointer" onclick="openCh(${s.b.id})">
+            <div style="font-weight:700;font-size:14px">${s.b.n}</div>
+            <div style="font-size:11px;color:${TC[s.b.team]}">${s.b.team} · ${s.b.shift}</div>
+            <div style="font-family:var(--mn);font-size:12px;color:var(--rd)">${fmt(s.b.avgTicket)} avg</div>
+            ${tb(getTier(s.b))}
+          </div>
+        </div>
+        <div style="font-size:12px;color:var(--m);line-height:1.6">${s.reason}</div>
+        <div style="font-size:11px;color:var(--gn);font-weight:600;margin-top:8px">${s.impact}</div>
+        <button class="abtn a-replace" style="font-size:11px;padding:8px 14px;margin-top:10px" onclick="addTask('SWAP: ${s.a.n} (${s.a.team}) ⇄ ${s.b.n} (${s.b.team})','high',${s.a.id});toast('Task created')">📋 Create Swap Task</button>
+      </div>
+    `).join('')}
+    `:''}
+
+    <!-- ═══ SECTION 5: LOWER-PRIORITY GAPS ═══ -->
+    ${gaps.filter(g=>!g.isHighValue).length?`
+    <div class="lbl" style="margin:24px 0 6px">5. Other Shift Gaps (${gaps.filter(g=>!g.isHighValue).length})</div>
+    <div style="font-size:12px;color:var(--d);margin-bottom:16px">Lower-priority gaps on growth pages. Fill when resources allow.</div>
+    ${gaps.filter(g=>!g.isHighValue).map(g=>`
+      <div class="card" style="padding:14px 18px;margin-bottom:8px;border-left:3px solid var(--am)">
+        <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+          <span style="font-weight:700;color:${TC[g.team]}">${g.team}</span>
+          <span style="color:var(--am);font-size:12px;font-weight:600">No ${g.shift}</span>
+          <span style="font-size:11px;color:var(--d)">${g.creator}</span>
+          ${g.candidates.length?`<span style="font-size:10px;color:var(--d);margin-left:auto">Candidates: ${g.candidates.map(c=>'<span style="cursor:pointer;color:var(--tl)" onclick="openCh('+c.id+')">'+c.n+'</span>').join(', ')}</span>`:''}
+        </div>
+      </div>
+    `).join('')}
+    `:''}
+
+    <!-- ═══ SECTION 6: COACHING & UPSELLING ═══ -->
+    ${coachList.length?`
+    <div class="lbl" style="margin:24px 0 6px">6. Avg Ticket Coaching (${coachList.length} chatters under $28)</div>
+    <div style="font-size:12px;color:var(--d);margin-bottom:16px">These chatters have potential but weak upselling. Pair with a mentor, train on PPV and custom requests. No page changes needed — just coaching recovers revenue.</div>
+    ${coachList.sort((a,b)=>a.avgTicket-b.avgTicket).map(c=>`
+      <div style="display:flex;align-items:center;gap:12px;padding:10px 14px;border-radius:10px;background:var(--s1);border:1px solid var(--b1);margin-bottom:6px;cursor:pointer" onclick="openCh(${c.chatter.id})">
+        <div style="font-weight:600;width:180px">${c.chatter.n}</div>
+        <span style="color:${TC[c.chatter.team]};font-size:11px;width:55px">${c.chatter.team}</span>
+        <span style="font-family:var(--mn);color:var(--rd);font-weight:700;width:55px">${fmt(c.avgTicket)}</span>
+        <span style="font-size:10px;color:var(--d);width:100px">→ $35 = +${fmt(c.potential)}/mo</span>
+        ${c.mentor?`<span style="font-size:10px;color:var(--tl)">Pair with: <strong>${c.mentor.n}</strong> (${fmt(c.mentor.avgTicket)} avg)</span>`:''}
+        ${tb(getTier(c.chatter))}
+        <button class="abtn a-coach" style="padding:4px 10px;font-size:9px;margin-left:auto" onclick="event.stopPropagation();addTask('Coach ${c.chatter.n} on upselling — pair with ${c.mentor?c.mentor.n:'star performer'}','medium',${c.chatter.id});toast('Task created')">Coach</button>
+      </div>
+    `).join('')}
+    `:''}
+
+    <!-- ═══ SECTION 7: CURRENT ALLOCATION MAP ═══ -->
+    <div class="lbl" style="margin:24px 0 12px">7. Current Allocation Map</div>
+    <div style="font-size:12px;color:var(--d);margin-bottom:16px">Full view of every team. Ranked by page value. Click any chatter.</div>
+    <div class="tw"><table>
+      <thead><tr><th>Team</th><th>Value</th><th>Creators</th><th>Morning</th><th>Day</th><th>Night</th><th>Filler</th><th>Team $</th></tr></thead>
+      <tbody>
+        ${Object.entries(TV).sort((a,b)=>b[1]-a[1]).map(([team,val])=>{
+          const ch=active.filter(c=>c.team===team);
+          const teamTot=ch.reduce((s,c)=>s+c.tot,0);
+          const renderSlot=(shift)=>{
+            const c=ch.find(x=>x.shift===shift);
+            if(!c)return'<td style="text-align:center;background:rgba(255,59,92,0.04)"><span style="color:var(--rd);font-size:10px;font-weight:600">EMPTY</span></td>';
+            const cols={star:'var(--gn)',solid:'var(--tl)',watch:'var(--am)',critical:'var(--rd)'};
+            const t=getTier(c);
+            return'<td style="cursor:pointer" onclick="openCh('+c.id+')"><div style="font-size:11px;font-weight:600;color:'+cols[t]+'">'+c.n.split(' ')[0]+' '+c.n.split(' ').slice(-1)+'</div><div style="font-size:9px;color:var(--d)">'+fmt(c.avgTicket)+' avg · '+t+'</div></td>';
+          };
+          const fillers=ch.filter(c=>c.shift.includes('Filler'));
+          return'<tr><td style="font-weight:700;color:'+TC[team]+'">'+team+'</td><td style="font-family:var(--mn);font-size:12px;color:'+(val>=60?'var(--gn)':'var(--d)')+'">'+val+'</td><td style="font-size:10px;color:var(--d);max-width:140px;white-space:normal">'+TCN[team]+'</td>'+renderSlot('Morning')+renderSlot('Day')+renderSlot('Night')+'<td style="font-size:10px;color:var(--d)">'+(fillers.length?fillers.map(c=>'<span style="cursor:pointer" onclick="openCh('+c.id+')">'+c.n.split(' ')[0]+'</span>').join(', '):'—')+'</td><td style="font-family:var(--mn);font-weight:700">'+fmt(teamTot)+'</td></tr>';
+        }).join('')}
+      </tbody>
+    </table></div>
+
+    <!-- POWER RANKING -->
+    <div class="lbl" style="margin:24px 0 12px">8. Chatter Power Ranking</div>
+    <div style="font-size:12px;color:var(--d);margin-bottom:16px">Every chatter ranked by overall value (avg ticket × 60% + total sales × 40%). Higher = more valuable. Mismatches highlighted.</div>
+    <div class="tw"><table>
+      <thead><tr><th>#</th><th>Chatter</th><th>Team</th><th>Shift</th><th>Page Value</th><th>Avg Ticket</th><th>March $</th><th>Tier</th><th>Fit</th></tr></thead>
+      <tbody>${ranked.map((c,i)=>{
+        const tv=TV[c.team]||40;
+        const chVal=getTier(c)==='star'?100:getTier(c)==='solid'?70:getTier(c)==='watch'?40:15;
+        const fit=Math.abs(chVal-tv);
+        const fitLabel=fit<=20?'Good':fit<=35?'OK':'MISMATCH';
+        const fitCol=fit<=20?'var(--gn)':fit<=35?'var(--am)':'var(--rd)';
+        return'<tr onclick="openCh('+c.id+')" style="'+(fitLabel==='MISMATCH'?'background:rgba(255,59,92,0.03)':'')+'"><td style="font-family:var(--mn);color:var(--d);font-size:11px">'+c.powerRank+'</td><td style="font-weight:600;font-size:12px">'+c.n+'</td><td style="color:'+TC[c.team]+';font-size:11px;font-weight:600">'+c.team+'</td><td style="font-size:11px;color:var(--m)">'+c.shift+'</td><td style="font-family:var(--mn);font-size:11px">'+tv+'</td><td style="font-family:var(--mn);font-weight:700;color:'+(c.avgTicket>=40?'var(--gn)':c.avgTicket<25?'var(--rd)':'')+'">'+fmt(c.avgTicket)+'</td><td style="font-family:var(--mn)">'+fmt(c.tot)+'</td><td>'+tb(getTier(c))+'</td><td style="font-weight:700;color:'+fitCol+';font-size:11px">'+fitLabel+'</td></tr>';
+      }).join('')}</tbody>
+    </table></div>
+  `;
+
+
+  /* HEATMAP */
+  const mxS=Math.max(...MD.flatMap(d=>d.h));
+  document.getElementById('t-heatmap').innerHTML=`<div class="lbl" style="margin-bottom:16px">2-Hour Sales Heat Map</div><div class="tw"><table><thead><tr><th style="position:sticky;left:0;z-index:2;background:#150D0D">Date</th>${TS.map(t=>`<th style="text-align:center;font-size:8px">${t}</th>`).join('')}<th style="text-align:right">Total</th></tr></thead><tbody>${MD.map(d=>`<tr><td style="padding:5px 8px;font-size:10px;font-family:var(--mn);color:${d.d===26?'var(--pk)':'var(--m)'};position:sticky;left:0;background:#150D0D;z-index:1">Mar ${d.d}</td>${d.h.map(v=>{const i=v/mxS;const bg=v===0?'rgba(255,255,255,0.01)':i>0.7?`rgba(255,60,172,${.15+i*.4})`:i>0.3?`rgba(255,107,53,${.08+i*.25})`:`rgba(255,255,255,${.02+i*.08})`;return`<td class="heatcell" style="color:${v===0?'#333':i>.5?'#fff':'var(--m)'};background:${bg}">${v>0?(v>=1000?(v/1000).toFixed(1)+'k':Math.round(v)):'—'}</td>`}).join('')}<td style="padding:5px 8px;text-align:right;font-size:10px;font-family:var(--mn);font-weight:600;color:${d.s>ME.dg?'var(--gn)':'var(--t)'}">${fK(d.s)}</td></tr>`).join('')}</tbody></table></div>`;
+
+  /* SETTINGS */
+  const db=getUserDB();const userList=Object.entries(db);const has2FA=U&&db[U.k]&&db[U.k].pin;
+  document.getElementById('t-settings').innerHTML=`
+    <div style="max-width:800px">
+    <!-- Profile Section -->
+    <div class="card" style="padding:24px;margin-bottom:16px">
+      <div class="lbl" style="margin-bottom:16px">Your Profile</div>
+      <div style="display:flex;gap:20px;align-items:center;margin-bottom:20px">
+        <div style="width:56px;height:56px;border-radius:16px;background:linear-gradient(135deg,var(--or),var(--pk));display:flex;align-items:center;justify-content:center;font-size:22px;font-weight:800;color:#fff">${U?U.n[0]:''}</div>
+        <div>
+          <div style="font-size:18px;font-weight:700">${U?U.n:''}</div>
+          <div style="font-size:12px;color:var(--d);margin-top:2px">${U?U.r.toUpperCase():''} · @${U?U.k:''}</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Change Password -->
+    <div class="card" style="padding:24px;margin-bottom:16px">
+      <div class="lbl" style="margin-bottom:16px">Change Password</div>
+      <div style="display:flex;flex-direction:column;gap:10px;max-width:350px">
+        <input class="li" id="sOldP" type="password" placeholder="Current password" style="text-align:left;padding:10px 14px;font-size:13px">
+        <input class="li" id="sNewP" type="password" placeholder="New password (min 6 chars)" style="text-align:left;padding:10px 14px;font-size:13px">
+        <input class="li" id="sConfP" type="password" placeholder="Confirm new password" style="text-align:left;padding:10px 14px;font-size:13px">
+        <button class="abtn a-note" onclick="changePassword(document.getElementById('sOldP').value,document.getElementById('sNewP').value,document.getElementById('sConfP').value)">Update Password</button>
+      </div>
+    </div>
+
+    <!-- 2FA Section -->
+    <div class="card" style="padding:24px;margin-bottom:16px">
+      <div class="lbl" style="margin-bottom:12px">Two-Factor Authentication (2FA)</div>
+      <div style="font-size:12px;color:var(--m);margin-bottom:16px">Add a 6-digit security PIN that will be required every time you log in. This adds an extra layer of protection to your account.</div>
+      ${has2FA?`
+        <div style="display:flex;align-items:center;gap:12px;padding:14px;border-radius:12px;background:rgba(0,229,155,0.06);border:1px solid rgba(0,229,155,0.15);margin-bottom:12px">
+          <span style="font-size:20px">🔒</span>
+          <div>
+            <div style="font-weight:700;color:var(--gn)">2FA is ENABLED</div>
+            <div style="font-size:11px;color:var(--d)">Your account is protected with a PIN</div>
+          </div>
+        </div>
+        <button class="abtn a-fire" onclick="if(confirm('Disable 2FA? Your account will only need a password to login.')){disable2FA()}">Disable 2FA</button>
+      `:`
+        <div style="display:flex;align-items:center;gap:12px;padding:14px;border-radius:12px;background:rgba(255,179,71,0.06);border:1px solid rgba(255,179,71,0.15);margin-bottom:12px">
+          <span style="font-size:20px">🔓</span>
+          <div>
+            <div style="font-weight:700;color:var(--am)">2FA is OFF</div>
+            <div style="font-size:11px;color:var(--d)">Set up a PIN for extra security</div>
+          </div>
+        </div>
+        <div style="display:flex;gap:10px;align-items:center;max-width:350px">
+          <input class="li" id="s2FAPin" placeholder="Choose a 6-digit PIN" maxlength="6" style="text-align:left;padding:10px 14px;font-size:13px;font-family:var(--mn);letter-spacing:4px;flex:1">
+          <button class="abtn a-move" onclick="setup2FA(document.getElementById('s2FAPin').value)">Enable 2FA</button>
+        </div>
+      `}
+    </div>
+
+    <!-- User Management (Admin Only) -->
+    ${isA()?`
+    <div class="card" style="padding:24px;margin-bottom:16px">
+      <div class="lbl" style="margin-bottom:16px">User Management <span style="font-size:9px;color:var(--rd);margin-left:6px">ADMIN ONLY</span></div>
+
+      <!-- Add User -->
+      <div style="padding:16px;border-radius:12px;background:var(--s2);border:1px solid var(--b1);margin-bottom:20px">
+        <div style="font-size:13px;font-weight:700;margin-bottom:12px">Add New User</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;max-width:500px">
+          <input class="li" id="aUN" placeholder="Username (login)" style="text-align:left;padding:10px 14px;font-size:13px">
+          <input class="li" id="aFN" placeholder="Full name" style="text-align:left;padding:10px 14px;font-size:13px">
+          <input class="li" id="aUP" type="password" placeholder="Password" style="text-align:left;padding:10px 14px;font-size:13px">
+          <select class="fsel" id="aUR" style="padding:10px 14px;font-size:13px"><option value="manager">Manager</option><option value="admin">Admin</option></select>
+        </div>
+        <button class="abtn a-move" style="margin-top:12px" onclick="addUser(document.getElementById('aUN').value,document.getElementById('aFN').value,document.getElementById('aUP').value,document.getElementById('aUR').value)">+ Add User</button>
+      </div>
+
+      <!-- User List -->
+      <div class="lbl" style="margin-bottom:12px">${userList.length} Users</div>
+      <div class="tw"><table>
+        <thead><tr><th>Username</th><th>Name</th><th>Role</th><th>2FA</th><th>Actions</th></tr></thead>
+        <tbody>
+          ${userList.sort((a,b)=>{const ro={admin:0,manager:1};return(ro[a[1].r]||2)-(ro[b[1].r]||2)}).map(([key,u])=>{
+            const isMe=key===U.k;
+            const roleColor=u.r==='admin'?'var(--pk)':'var(--tl)';
+            return`<tr style="${isMe?'background:rgba(255,60,172,0.04)':''}">
+              <td style="font-family:var(--mn);font-size:12px">${key}${isMe?' <span style="font-size:9px;color:var(--pk)">(you)</span>':''}</td>
+              <td style="font-weight:600">${u.n}</td>
+              <td><span class="ab" style="background:${roleColor}15;color:${roleColor}">${u.r.toUpperCase()}</span></td>
+              <td>${u.pin?'<span style="color:var(--gn);font-size:11px;font-weight:600">Enabled</span>':'<span style="color:var(--d);font-size:11px">Off</span>'}</td>
+              <td style="white-space:nowrap">${isMe?'—':`
+                <select class="fsel" style="font-size:10px;padding:3px 8px;margin-right:4px" onchange="changeUserRole('${key}',this.value)">
+                  <option value="manager" ${u.r==='manager'?'selected':''}>Manager</option>
+                  <option value="admin" ${u.r==='admin'?'selected':''}>Admin</option>
+                </select>
+                ${u.pin?`<button style="background:none;border:1px solid var(--b2);border-radius:6px;color:var(--am);font-size:10px;padding:3px 8px;cursor:pointer;margin-right:4px;font-family:var(--ff)" onclick="resetUser2FA('${key}')">Reset 2FA</button>`:''}
+                <button style="background:none;border:1px solid var(--b2);border-radius:6px;color:var(--d);font-size:10px;padding:3px 8px;cursor:pointer;margin-right:4px;font-family:var(--ff)" onclick="const p=prompt('New password for ${u.n}:');if(p)resetUserPassword('${key}',p)">Reset PW</button>
+                <button style="background:none;border:1px solid rgba(255,59,92,0.3);border-radius:6px;color:var(--rd);font-size:10px;padding:3px 8px;cursor:pointer;font-family:var(--ff)" onclick="if(confirm('Remove ${u.n}?'))removeUser('${key}')">Remove</button>
+              `}</td>
+            </tr>`}).join('')}
+        </tbody>
+      </table></div>
+    </div>
+
+    <!-- Danger Zone -->
+    <div class="card" style="padding:24px;border:1px solid rgba(255,59,92,0.15)">
+      <div class="lbl" style="color:var(--rd);margin-bottom:12px">Danger Zone</div>
+      <div style="display:flex;gap:10px;flex-wrap:wrap">
+        <button class="abtn a-fire" onclick="if(confirm('Reset ALL dashboard data? Notes, tasks, actions will be lost. Users will stay.')){localStorage.removeItem('sv7');localStorage.removeItem('st7');toast('Data cleared');render()}">Clear All Dashboard Data</button>
+        <button class="abtn" style="background:rgba(255,59,92,0.08);color:var(--rd);border:1px solid rgba(255,59,92,0.2)" onclick="if(confirm('FULL RESET? This removes ALL data including users. You will need to log in again.')){localStorage.clear();location.reload()}">Factory Reset</button>
+      </div>
+    </div>
+    `:'<div class="card" style="padding:24px"><div style="color:var(--d);font-size:13px">User management is only available to administrators. Contact an admin to add or remove users.</div></div>'}
+    </div>
+  `;
+}
+
+/* ═══ LIVE DATA SYNC ═══ */
+const SHEET_BASE='/api/sheet?sid=slushy&sheet=';
+var lastSync=null;var syncStatus='connecting';
+
+function parseCSV(text){
+  const rows=[];let current='';let inQ=false;let row=[];
+  for(let i=0;i<text.length;i++){
+    const ch=text[i];
+    if(ch==='"'){inQ=!inQ}
+    else if(ch===','&&!inQ){row.push(current.trim().replace(/^"|"$/g,''));current=''}
+    else if((ch==='\n'||ch==='\r')&&!inQ){
+      if(current.length||row.length){row.push(current.trim().replace(/^"|"$/g,''));rows.push(row);row=[];current=''}
+    }else{current+=ch}
+  }
+  if(current.length||row.length){row.push(current.trim().replace(/^"|"$/g,''));rows.push(row)}
+  return rows;
+}
+
+function parseNum(s){return parseFloat((s||'0').replace(/[$,"%]/g,''))||0}
+
+async function syncChatterData(){
+  try{
+    const url=SHEET_BASE+encodeURIComponent('Chatter Net Sales (Payroll)');
+    const resp=await fetch(url);
+    if(!resp.ok)throw new Error('HTTP '+resp.status);
+    const csv=await resp.text();
+    const rows=parseCSV(csv);
+    
+    // Find header row
+    let hdr=-1;
+    for(let i=0;i<Math.min(rows.length,10);i++){
+      if(rows[i].some(c=>c.includes('Chatter Name'))){hdr=i;break}
+    }
+    if(hdr<0)return false;
+    
+    const h=rows[hdr];
+    const col=(name)=>h.findIndex(c=>c.includes(name));
+    const iName=col('Chatter Name'),iStatus=col('Status'),iTeam=col('Team');
+    const iShift=col('Shift');
+    const i14=col('1 to 14'),i15=col('15 to End'),iTot=col('Total Month');
+    const iGoal=col('Goal')>=0?col('Goal'):col('Target');
+    const iSales=col('Sale Count')>=0?col('Sale Count'):col('Sales');
+    
+    if(iName<0||iTot<0)return false;
+    
+    // Build fresh data from sheet, preserving daily arrays from old D
+    const oldMap={};
+    D.forEach(c=>{oldMap[c.n]=c});
+    
+    const freshD=[];
+    let id=1;
+    for(let i=hdr+1;i<rows.length;i++){
+      const r=rows[i];const name=(r[iName]||'').trim();
+      if(!name||name.length<2)continue;
+      const tot=parseNum(r[iTot]);
+      const old=oldMap[name]||{};
+      freshD.push({
+        id:id++,
+        n:name,
+        st:iStatus>=0&&r[iStatus]?r[iStatus].trim():(old.st||'Active'),
+        team:iTeam>=0&&r[iTeam]?r[iTeam].trim():(old.team||''),
+        shift:iShift>=0&&r[iShift]?r[iShift].trim():(old.shift||''),
+        goal:iGoal>=0?parseNum(r[iGoal]):(old.goal||0),
+        f14:i14>=0?parseNum(r[i14]):(old.f14||0),
+        l15:i15>=0?parseNum(r[i15]):(old.l15||0),
+        tot:tot,
+        sales:iSales>=0?parseInt(r[iSales])||0:(old.sales||0),
+        daily:old.daily||[]
+      });
+    }
+    
+    if(freshD.length>=5){
+      D.length=0;
+      freshD.forEach(c=>D.push(c));
+      enrich();
+      console.log('[Slushy] Full sync: '+D.length+' chatters from sheet');
+      return true;
+    }
+    return false;
+  }catch(e){console.log('Chatter sync error:',e.message);return false}
+}
+
+async function syncDashboardData(){
+  try{
+    const url=SHEET_BASE+encodeURIComponent('Slushy Dashboard');
+    const resp=await fetch(url);
+    if(!resp.ok)throw new Error('HTTP '+resp.status);
+    const csv=await resp.text();
+    const rows=parseCSV(csv);
+    
+    // Look for key values in the data
+    for(let i=0;i<rows.length;i++){
+      const r=rows[i];
+      for(let j=0;j<r.length;j++){
+        const v=r[j];
+        // March Running Sales (look for the big number near "March Running")
+        if(j>0&&r[j-1]&&r[j-1].includes('March Running')){ME.mr=parseNum(v)||ME.mr}
+        // Monthly Goal
+        if(v.includes('Monthly Goal')&&rows[i+1]){ME.mg=parseNum(rows[i+1][j])||ME.mg}
+        // Monthly Proj
+        if(v.includes('Monthly Proj')&&rows[i+1]){ME.mp=parseNum(rows[i+1][j])||ME.mp}
+        // Daily Goal
+        if(v.includes('Daily Goal')&&rows[i+1]){ME.dg=parseNum(rows[i+1][j])||ME.dg}
+        // Total Sale Count
+        if(v.includes('Total Sale Count')&&rows[i+1]){ME.sc=parseNum(rows[i+1][j])||ME.sc}
+      }
+    }
+    
+    // Find today/yesterday values
+    // Look for "Today" row with a dollar amount
+    for(let i=0;i<rows.length;i++){
+      for(let j=0;j<rows[i].length;j++){
+        const v=rows[i][j];
+        if(v&&v.includes('Today')&&rows[i][j+1]){
+          const val=parseNum(rows[i][j+1]);
+          if(val>0)ME.td=val;
+        }
+        if(v&&v.includes('Yesterday')&&rows[i][j+1]){
+          const val=parseNum(rows[i][j+1]);
+          if(val>0)ME.yd=val;
+        }
+      }
+    }
+    
+    // Find February Sales
+    for(let i=0;i<rows.length;i++){
+      const r=rows[i];
+      if(r.some(c=>c.includes('February Sales'))){
+        for(let j=0;j<r.length;j++){
+          const val=parseNum(r[j]);
+          if(val>50000){ME.feb=val;break}
+        }
+      }
+    }
+    
+    // Parse daily heat map data
+    // Look for rows starting with "Mar 01", "Mar 02", etc.
+    for(let i=0;i<rows.length;i++){
+      const r=rows[i];
+      if(!r[0])continue;
+      const dayMatch=r[0].match(/Mar\s*(\d+)/);
+      if(dayMatch){
+        const dayNum=parseInt(dayMatch[1]);
+        const dayEntry=MD.find(d=>d.d===dayNum);
+        if(dayEntry){
+          // Update hourly slots
+          const slots=[];let dayTotal=0;
+          for(let j=1;j<=12&&j<r.length;j++){
+            const val=parseNum(r[j]);
+            slots.push(val);
+            dayTotal+=val;
+          }
+          if(dayTotal>0){
+            dayEntry.h=slots.length===12?slots:dayEntry.h;
+            dayEntry.s=dayTotal;
+          }
+        }else if(dayNum>0&&dayNum<=31){
+          // New day not in our data
+          const slots=[];let dayTotal=0;
+          for(let j=1;j<=12&&j<r.length;j++){
+            const val=parseNum(r[j]);
+            slots.push(val);dayTotal+=val;
+          }
+          if(dayTotal>0&&slots.length===12){
+            MD.push({d:dayNum,s:dayTotal,h:slots});
+            MD.sort((a,b)=>a.d-b.d);
+          }
+        }
+      }
+    }
+    
+    // Recalculate running total from daily data
+    const runningFromDaily=MD.reduce((s,d)=>s+d.s,0);
+    if(runningFromDaily>50000)ME.mr=runningFromDaily;
+    
+    // Update projection
+    const daysWithData=MD.filter(d=>d.s>0).length;
+    if(daysWithData>0)ME.mp=(ME.mr/daysWithData)*31;
+    
+    return true;
+  }catch(e){console.log('Dashboard sync error:',e.message);return false}
+}
+
+async function syncChatterRanking(){
+  try{
+    const url=SHEET_BASE+encodeURIComponent('Slushy Dashboard');
+    const resp=await fetch(url);
+    if(!resp.ok)throw new Error('HTTP '+resp.status);
+    const csv=await resp.text();
+    const rows=parseCSV(csv);
+    
+    // Find the ranking section (look for "Rank", "Chatter", "Total Sales")
+    let rankHdr=-1;
+    for(let i=0;i<rows.length;i++){
+      if(rows[i].some(c=>c==='Rank')&&rows[i].some(c=>c.includes('Chatter'))&&rows[i].some(c=>c.includes('Total Sales'))){
+        rankHdr=i;break;
+      }
+    }
+    if(rankHdr<0)return;
+    
+    const h2=rows[rankHdr];
+    const iRank=h2.findIndex(c=>c==='Rank');
+    const iChatter=h2.findIndex(c=>c.includes('Chatter'));
+    const iShift=h2.findIndex(c=>c.includes('Shift'));
+    const iTeamR=h2.findIndex(c=>c==='Team');
+    const iTotalS=h2.findIndex(c=>c.includes('Total Sales'));
+    const iCount=h2.findIndex(c=>c.includes('Sale Count'));
+    
+    const todayRanking=[];
+    for(let i=rankHdr+1;i<rows.length;i++){
+      const r=rows[i];
+      const name=iChatter>=0?r[iChatter]:'';
+      const sales=iTotalS>=0?parseNum(r[iTotalS]):0;
+      if(!name||name.length<2||sales===0)break;
+      todayRanking.push({
+        n:name,
+        team:iTeamR>=0?r[iTeamR]:'',
+        sales:sales,
+        count:iCount>=0?parseInt(r[iCount])||1:1
+      });
+    }
+    
+    if(todayRanking.length>0){
+      // Determine today's day number
+      const today=new Date();
+      const dayNum=today.getDate();
+      DAY_RANKINGS[dayNum]=todayRanking;
+      ME.tc=todayRanking.reduce((s,r)=>s+r.count,0);
+      ME.td=todayRanking.reduce((s,r)=>s+r.sales,0);
+    }
+  }catch(e){console.log('Ranking sync error:',e.message)}
+}
+
+async function doSync(){
+  try{
+    const results=await Promise.allSettled([
+      syncChatterData(),
+      syncDashboardData(),
+      syncChatterRanking()
+    ]);
+    
+    const anyOk=results.some(r=>r.status==='fulfilled'&&r.value===true);
+    lastSync=new Date();
+    syncStatus=anyOk?'live':'partial';
+    
+    document.getElementById('lS').innerHTML=`<span class="ld" style="background:${anyOk?'var(--gn)':'var(--am)'}"></span>${anyOk?'Live':'Partial'} · ${lastSync.toLocaleTimeString()}`;
+    
+    if(anyOk)render();
+    return anyOk;
+  }catch(e){
+    syncStatus='offline';
+    document.getElementById('lS').innerHTML='<span style="width:8px;height:8px;border-radius:50%;background:var(--rd);display:inline-block"></span> Offline';
+    return false;
+  }
+}
+
+function init(){
+const errs=[];
+try{
+  document.getElementById('t-overview').innerHTML='<div style="padding:20px;color:var(--t)">Loading dashboard... syncing with Google Sheets...</div>';
+  document.getElementById('tbar').innerHTML=TABS.map(t=>`<button class="tb${tab===t.id?' on':''}" onclick="switchTab('${t.id}')">${t.l}</button>`).join('');
+}catch(e){errs.push('Tab init: '+e.message)}
+try{render()}catch(e){
+  errs.push('Render: '+e.message+'\n'+e.stack);
+  document.getElementById('t-overview').innerHTML='<div style="padding:40px"><h2 style="color:#FF3B5C;margin-bottom:12px">Dashboard Error</h2><pre style="color:#8899AA;white-space:pre-wrap;font-size:13px;line-height:1.6;background:rgba(255,255,255,0.03);padding:20px;border-radius:12px">'+errs.join('\n\n')+'</pre></div>';
+}
+// Start live sync
+doSync();
+setInterval(doSync, 60000);
+}
+
+/* ─── AUTO-LOGIN (must be after all declarations) ─── */
+const sv=localStorage.getItem('su7');
+if(sv){try{U=JSON.parse(sv);showApp()}catch(e){localStorage.removeItem('su7')}}
+</script>
+</body>
+</html>
