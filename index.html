@@ -1052,23 +1052,44 @@ async function syncSalesData(){
     if(rows.length<8)return false;
 
     // Parse summary stats - find label then grab next non-empty numeric value
-    function findValAfter(r,j){for(let k=j+1;k<Math.min(r.length,j+5);k++){const v=parseNum(r[k]);if(v>0)return v;} return 0}
+    function findValAfter(r,j){for(let k=j+1;k<Math.min(r.length,j+8);k++){const v=parseNum(r[k]);if(v>0)return v;} return 0}
+    // Debug: log first 7 rows to see what we're parsing
+    for(let i=0;i<Math.min(rows.length,7);i++){
+      const nonEmpty=rows[i].filter(c=>c&&c.trim()).slice(0,6);
+      if(nonEmpty.length)console.log('[Slushy] Row '+i+': '+nonEmpty.join(' | '));
+    }
     for(let i=0;i<Math.min(rows.length,7);i++){
       const r=rows[i];
       for(let j=0;j<r.length;j++){
         const v=(r[j]||'').trim();
-        if(v==='Total Active Pages')ME.activePages=findValAfter(r,j);
-        if(v==='Running Sales')ME.mr=findValAfter(r,j);
-        if(v==='Monthly Projections')ME.mp=findValAfter(r,j);
-        if(v==='Monthly Goal')ME.mg=findValAfter(r,j);
-        if(v==='Total Sale Count')ME.sc=findValAfter(r,j);
-        if(v==='Total Follows')ME.totalFollows=findValAfter(r,j);
-        if(v==='Total Visits')ME.totalVisits=findValAfter(r,j);
-        if(v==='Daily Sales Average'||v==='Daily Sales Averag')ME.dp=findValAfter(r,j);
-        if(v==='Daily Goal')ME.dg=findValAfter(r,j);
+        const vl=v.toLowerCase();
+        if(vl.includes('total active page'))ME.activePages=findValAfter(r,j);
+        if(vl==='running sales'||vl.includes('running sale'))ME.mr=findValAfter(r,j);
+        if(vl.includes('monthly proj'))ME.mp=findValAfter(r,j);
+        if(vl==='monthly goal'||vl.includes('monthly goal'))ME.mg=findValAfter(r,j);
+        if(vl.includes('total sale count'))ME.sc=findValAfter(r,j);
+        if(vl.includes('total follow'))ME.totalFollows=findValAfter(r,j);
+        if(vl.includes('total visit'))ME.totalVisits=findValAfter(r,j);
+        if(vl.includes('daily sales aver'))ME.dp=findValAfter(r,j);
+        if(vl.includes('daily goal'))ME.dg=findValAfter(r,j);
       }
     }
     console.log('[Slushy] Summary: Running=$'+ME.mr+' Goal=$'+ME.mg+' Proj=$'+ME.mp);
+    
+    // Fallback: if summary stats still zero, calculate from daily data
+    if(ME.mr===0&&MD.length>0){
+      ME.mr=MD.reduce((s,d)=>s+d.s,0);
+      console.log('[Slushy] Fallback running from daily totals: $'+ME.mr);
+    }
+    const daysWithData=MD.filter(d=>d.s>0).length;
+    if(ME.mp===0&&daysWithData>0){
+      const daysInMonth=new Date(currentYear,currentMonth+1,0).getDate();
+      ME.mp=(ME.mr/daysWithData)*daysInMonth;
+    }
+    if(ME.dg===0&&ME.mg>0){
+      const daysInMonth=new Date(currentYear,currentMonth+1,0).getDate();
+      ME.dg=ME.mg/daysInMonth;
+    }
 
     // Parse daily totals from row 5 (index 4) - "Daily Sales" row
     // Daily values start after the labels, around col 19
