@@ -1167,13 +1167,23 @@ async function syncSalesData(){
     for(let i=5;i<Math.min(rows.length,10);i++){
       if(rows[i]&&rows[i].some(c=>c==='Rank'||c==='Model')){hdrIdx=i;break}
     }
+    console.log('[Slushy] Model header row:',hdrIdx);
     if(hdrIdx>=0){
       const h=rows[hdrIdx];
+      console.log('[Slushy] Header cols:',h.filter(c=>c).join(' | '));
       const col=(name)=>h.findIndex(c=>c&&c.toLowerCase().includes(name.toLowerCase()));
       const iRank=col('Rank'),iModel=col('Model'),iStart=col('Start Date');
       const iType=col('Account Type'),iSales=col('Running Sales');
       const iProj=col('Projections'),iMoM=h.findIndex(c=>c&&c.includes('/%'));
       const iCount=col('Sale Count'),iFollows=col('Page Follow'),iVisit=col('Page Visit');
+      console.log('[Slushy] Col indices: Model='+iModel+' Sales='+iSales+' Proj='+iProj+' Count='+iCount);
+      
+      // Debug first data row
+      if(rows[hdrIdx+1]){
+        const r1=rows[hdrIdx+1];
+        console.log('[Slushy] First data row['+iModel+']='+(iModel>=0?r1[iModel]:'')+' row['+iSales+']='+(iSales>=0?r1[iSales]:''));
+        console.log('[Slushy] First row sample: '+r1.filter(c=>c).slice(0,15).join(' | '));
+      }
 
       CR.length=0;
       for(let i=hdrIdx+1;i<rows.length;i++){
