@@ -1161,60 +1161,67 @@ async function syncSalesData(){
       ME.dg=ME.mg/dim;
     }
 
-    // Parse model/creator data from row 7 onwards (index 6 = header, 7+ = data)
+    // Parse model/creator data - find header row with Rank+Model columns
     let hdrIdx=-1;
-    for(let i=5;i<Math.min(rows.length,10);i++){
-      if(rows[i]&&rows[i].some(c=>{const v=(c||'').toString().trim().toLowerCase();return v==='rank'||v==='model'})){hdrIdx=i;break}
+    for(let i=3;i<Math.min(rows.length,12);i++){
+      const r=rows[i];if(!r)continue;
+      const joined=r.map(c=>(c||'').toString().trim().toLowerCase()).join('|');
+      if(joined.includes('rank')&&(joined.includes('model')||joined.includes('running sales'))){hdrIdx=i;break}
+    }
+    // Debug: dump rows 5-8 to find the structure
+    for(let i=5;i<Math.min(rows.length,9);i++){
+      const r=rows[i];if(!r)continue;
+      const vals=r.map((c,idx)=>{const v=(c||'').toString().trim();return v?idx+':'+v.substring(0,20):null}).filter(Boolean);
+      console.log('[Slushy] Row'+i+': '+vals.join(' | '));
     }
     console.log('[Slushy] Model header row:',hdrIdx);
+    
     if(hdrIdx>=0){
       const h=rows[hdrIdx];
-      console.log('[Slushy] Header cols:',h.filter(c=>c).join(' | '));
-      const col=(name)=>h.findIndex(c=>c&&c.toLowerCase().includes(name.toLowerCase()));
+      const col=(name)=>{
+        for(let j=0;j<h.length;j++){
+          const v=(h[j]||'').toString().trim().toLowerCase();
+          if(v.includes(name.toLowerCase()))return j;
+        }
+        return -1;
+      };
       const iRank=col('Rank'),iModel=col('Model'),iStart=col('Start Date');
       const iType=col('Account Type'),iSales=col('Running Sales');
-      const iProj=col('Projections'),iMoM=h.findIndex(c=>c&&c.includes('/%'));
-      const iCount=col('Sale Count'),iFollows=col('Page Follow'),iVisit=col('Page Visit');
-      console.log('[Slushy] Col indices: Model='+iModel+' Sales='+iSales+' Proj='+iProj+' Count='+iCount);
+      const iProj=col('Projection'),iCount=col('Sale Count');
+      const iFollows=col('Page Follow'),iVisit=col('Page Visit');
+      const iMoM=h.findIndex(c=>c&&(c.toString().includes('/%')||c.toString().includes('Mar%')||c.toString().includes('Apr/')));
+      console.log('[Slushy] Cols: Rank='+iRank+' Model='+iModel+' Sales='+iSales+' Proj='+iProj+' Count='+iCount+' Type='+iType);
       
       // Debug first data row
       if(rows[hdrIdx+1]){
         const r1=rows[hdrIdx+1];
-        console.log('[Slushy] First data row['+iModel+']='+(iModel>=0?r1[iModel]:'')+' row['+iSales+']='+(iSales>=0?r1[iSales]:''));
-        console.log('[Slushy] First row sample: '+r1.filter(c=>c).slice(0,15).join(' | '));
+        const vals=r1.map((c,idx)=>{const v=(c||'').toString().trim();return v?idx+':'+v.substring(0,15):null}).filter(Boolean).slice(0,20);
+        console.log('[Slushy] DataRow1: '+vals.join(' | '));
       }
 
       CR.length=0;
       for(let i=hdrIdx+1;i<rows.length;i++){
-        const r=rows[i];
-        const model=(iModel>=0?r[iModel]:'').trim();
+        const r=rows[i];if(!r)continue;
+        const model=(iModel>=0?(r[iModel]||''):'').toString().trim();
         if(!model||model.length<2)continue;
+        // Skip if model name looks like a label
+        if(model.toLowerCase().includes('top 20')||model.toLowerCase().includes('running sales'))continue;
+        
         const rank=iRank>=0?parseInt(r[iRank])||999:i-hdrIdx;
-        const sales=iSales>=0?parseNum(r[iSales]):0;
-        const proj=iProj>=0?parseNum(r[iProj]):0;
-        const mom=iMoM>=0?parseNum(r[iMoM]):0;
+        const sales=iSales>=0?parseNum((r[iSales]||'').toString()):0;
+        const proj=iProj>=0?parseNum((r[iProj]||'').toString()):0;
+        const mom=iMoM>=0?parseNum((r[iMoM]||'').toString()):0;
         const count=iCount>=0?parseInt(r[iCount])||0:0;
         const follows=iFollows>=0?parseInt(r[iFollows])||0:0;
         const visits=iVisit>=0?parseInt(r[iVisit])||0:0;
-        const accType=(iType>=0?r[iType]:'').trim();
-        const startDate=(iStart>=0?r[iStart]:'').trim();
-
-        // Parse daily sales for this model
-        const modelDaily=[];
-        const dailyStartCol2=h.findIndex(c=>c&&(c.includes('2026-')||c.match(/^(Jan|Feb|Mar|Apr)/i)));
-        if(dailyStartCol2>=0){
-          const daysInMonth=new Date(currentYear,currentMonth+1,0).getDate();
-          for(let d=0;d<daysInMonth;d++){
-            const ci=dailyStartCol2+d;
-            modelDaily.push(ci<r.length?parseNum(r[ci]):0);
-          }
-        }
+        const accType=(iType>=0?(r[iType]||''):'').toString().trim();
+        const startDate=(iStart>=0?(r[iStart]||''):'').toString().trim();
 
         CR.push({
           id:model.toLowerCase().replace(/\s+/g,''),
           n:model,
-          t:'', // team from Reference sheet
-          g:0, // goal from Reference sheet
+          t:'',
+          g:0,
           rank:rank,
           sales:sales,
           proj:proj,
@@ -1224,9 +1231,10 @@ async function syncSalesData(){
           visits:visits,
           accType:accType,
           startDate:startDate,
-          daily:modelDaily
+          daily:[]
         });
       }
+      if(CR.length>0)console.log('[Slushy] First model: '+CR[0].n+' sales=$'+CR[0].sales+' proj=$'+CR[0].proj);
     }
     
     // Now fetch Reference sheet for team/goal data
