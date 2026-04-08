@@ -1073,9 +1073,8 @@ async function syncSalesData(){
     }
     console.log('[Slushy] Summary: Running=$'+ME.mr+' Goal=$'+ME.mg+' Proj=$'+ME.mp+' SC='+ME.sc);
     
-    // Direct position fallback: summary is at known positions in the sheet
-    // Row 1-5, col 9=label, col 11=value, col 13=label2, col 14=value2
-    if(ME.mr===0){
+    // Direct position fallback for any missing values
+    if(ME.mr===0||ME.mg===0||ME.sc===0){
       for(let i=0;i<Math.min(rows.length,8);i++){
         const r=rows[i];if(!r)continue;
         // Try every cell for the value next to "Running Sales"
@@ -1165,7 +1164,7 @@ async function syncSalesData(){
     // Parse model/creator data from row 7 onwards (index 6 = header, 7+ = data)
     let hdrIdx=-1;
     for(let i=5;i<Math.min(rows.length,10);i++){
-      if(rows[i]&&rows[i].some(c=>c==='Rank'||c==='Model')){hdrIdx=i;break}
+      if(rows[i]&&rows[i].some(c=>{const v=(c||'').toString().trim().toLowerCase();return v==='rank'||v==='model'})){hdrIdx=i;break}
     }
     console.log('[Slushy] Model header row:',hdrIdx);
     if(hdrIdx>=0){
@@ -1428,10 +1427,47 @@ async function syncChatterData(){
   }catch(e){console.log('Chatter sync error:',e.message);return false}
 }
 
+/* ── Sync from Slushy Dashboard tab (main ops dashboard) ── */
+async function syncMainDashboard(){
+  try{
+    const url=SALES_SHEET_BASE+encodeURIComponent('Slushy Dashboard');
+    const resp=await fetch(url);
+    if(!resp.ok)return false;
+    const csv=await resp.text();
+    const rows=parseCSV(csv);
+    
+    // This tab has pre-computed values in a specific layout
+    for(let i=0;i<rows.length;i++){
+      const r=rows[i];
+      for(let j=0;j<r.length;j++){
+        const v=(r[j]||'').toString().trim().toLowerCase();
+        // Look for key values
+        if(v==='monthly goal'&&ME.mg===0){for(let k=j+1;k<Math.min(r.length,j+5);k++){const n=parseNum(r[k]);if(n>1000){ME.mg=n;break}}}
+        if(v==='daily goal'&&ME.dg===0){for(let k=j+1;k<Math.min(r.length,j+5);k++){const n=parseNum(r[k]);if(n>0){ME.dg=n;break}}}
+        if(v==='daily proj'&&ME.dp===0){for(let k=j+1;k<Math.min(r.length,j+5);k++){const n=parseNum(r[k]);if(n>0){ME.dp=n;break}}}
+        if(v==='monthly proj'&&ME.mp===0){for(let k=j+1;k<Math.min(r.length,j+5);k++){const n=parseNum(r[k]);if(n>1000){ME.mp=n;break}}}
+        if(v.includes('total sale count')&&ME.sc===0){for(let k=j+1;k<Math.min(r.length,j+5);k++){const n=parseNum(r[k]);if(n>0){ME.sc=n;break}}}
+        if(v.includes('april running sale')||v.includes('march running sale')){for(let k=j+1;k<Math.min(r.length,j+5);k++){const n=parseNum(r[k]);if(n>1000&&ME.mr===0){ME.mr=n;break}}}
+      }
+    }
+    
+    // Also look for the model breakdown section
+    // Find "Breakdown per Model" section
+    let bpmRow=-1;
+    for(let i=0;i<rows.length;i++){
+      if(rows[i]&&rows[i].some(c=>(c||'').toString().includes('Breakdown per Model'))){bpmRow=i;break}
+    }
+    
+    console.log('[Slushy] MainDash sync: Goal=$'+ME.mg+' SC='+ME.sc+' BPM row='+bpmRow);
+    return true;
+  }catch(e){console.log('MainDash sync error:',e.message);return false}
+}
+
 async function doSync(){
   try{
     const results=await Promise.allSettled([
       syncSalesData(),
+      syncMainDashboard(),
       syncChatterData(),
       syncPrevMonth(),
       syncSalesRecord()
