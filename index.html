@@ -1072,6 +1072,44 @@ async function syncSalesData(){
       }
     }
     console.log('[Slushy] Summary: Running=$'+ME.mr+' Goal=$'+ME.mg+' Proj=$'+ME.mp+' SC='+ME.sc);
+    
+    // Direct position fallback: summary is at known positions in the sheet
+    // Row 1-5, col 9=label, col 11=value, col 13=label2, col 14=value2
+    if(ME.mr===0){
+      for(let i=0;i<Math.min(rows.length,8);i++){
+        const r=rows[i];if(!r)continue;
+        // Try every cell for the value next to "Running Sales"
+        for(let j=0;j<r.length-1;j++){
+          const cell=(r[j]||'').toString().trim();
+          if(cell==='Running Sales'||cell==='running sales'){
+            // Grab the next numeric value
+            for(let k=j+1;k<Math.min(r.length,j+5);k++){
+              const n=parseFloat((r[k]||'').toString().replace(/[$,]/g,''));
+              if(n>500){ME.mr=n;console.log('[Slushy] Direct: Running=$'+n+' from row '+i+' col '+k);break}
+            }
+          }
+          if(cell==='Monthly Goal'||cell==='monthly goal'){
+            for(let k=j+1;k<Math.min(r.length,j+5);k++){
+              const n=parseFloat((r[k]||'').toString().replace(/[$,]/g,''));
+              if(n>500){ME.mg=n;break}
+            }
+          }
+          if(cell.includes('Monthly Proj')||cell.includes('monthly proj')){
+            for(let k=j+1;k<Math.min(r.length,j+5);k++){
+              const n=parseFloat((r[k]||'').toString().replace(/[$,]/g,''));
+              if(n>500){ME.mp=n;break}
+            }
+          }
+          if(cell==='Total Sale Count'||cell.includes('Total Sale Count')){
+            for(let k=j+1;k<Math.min(r.length,j+5);k++){
+              const n=parseFloat((r[k]||'').toString().replace(/[$,]/g,''));
+              if(n>0){ME.sc=n;break}
+            }
+          }
+        }
+      }
+      console.log('[Slushy] After direct: Running=$'+ME.mr+' Goal=$'+ME.mg+' Proj=$'+ME.mp);
+    }
 
     // Parse daily totals from row 5 (index 4) - "Daily Sales" row
     // Daily values start after the labels, around col 19
