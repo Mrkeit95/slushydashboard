@@ -1020,7 +1020,7 @@ function render(){
 }
 
 /* ═══ LIVE DATA SYNC ═══ */
-const SALES_SHEET_BASE='/api/sheet?sid=slushysales&sheet=';
+const SALES_SHEET_BASE='/api/sheet?sid=slushy&sheet=';
 const CHATTER_SHEET_BASE='/api/sheet?sid=slushy&sheet=';
 var lastSync=null;var syncStatus='connecting';
 
@@ -1043,7 +1043,9 @@ function parseNum(s){return parseFloat((s||'0').replace(/[$,"%]/g,''))||0}
 /* ── Sync model/revenue data from new Slushy Sales sheet ── */
 async function syncSalesData(){
   try{
-    const tabName=getMonthTabName(currentMonth,currentYear);
+    const now2=new Date();
+    const isCurrentMonth=(currentMonth===now2.getMonth()&&currentYear===now2.getFullYear());
+    const tabName=getMonthTabName(currentMonth,currentYear)+(isCurrentMonth?' (Current)':'');
     const url=SALES_SHEET_BASE+encodeURIComponent(tabName);
     const resp=await fetch(url);
     if(!resp.ok)throw new Error('HTTP '+resp.status);
@@ -1197,7 +1199,7 @@ async function syncSalesData(){
 /* ── Sync team/goal data from Reference tab ── */
 async function syncReferenceData(){
   try{
-    const url=SALES_SHEET_BASE+encodeURIComponent('Reference(DoNotTouch)');
+    const url='/api/sheet?sid=slushy&sheet='+encodeURIComponent('Reference');
     const resp=await fetch(url);
     if(!resp.ok)return;
     const csv=await resp.text();
@@ -1268,7 +1270,7 @@ var LIFE_DATA={}; // {chatterName: {sales: total, count: total, months: Set}}
 
 async function syncSalesRecord(){
   try{
-    const url=SALES_SHEET_BASE+encodeURIComponent('Sales Record');
+    const url='/api/sheet?sid=slushy&sheet='+encodeURIComponent('Sales Record');
     const resp=await fetch(url);
     if(!resp.ok)return false;
     const csv=await resp.text();
