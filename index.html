@@ -1045,11 +1045,21 @@ async function syncSalesData(){
   try{
     const now2=new Date();
     const isCurrentMonth=(currentMonth===now2.getMonth()&&currentYear===now2.getFullYear());
-    const tabName=getMonthTabName(currentMonth,currentYear)+(isCurrentMonth?' (Current)':'');
-    const url=SALES_SHEET_BASE+encodeURIComponent(tabName);
-    const resp=await fetch(url);
-    if(!resp.ok)throw new Error('HTTP '+resp.status);
-    const csv=await resp.text();
+    // Try with (Current) suffix first, then without
+    const tabNames=[
+      getMonthTabName(currentMonth,currentYear)+(isCurrentMonth?' (Current)':''),
+      getMonthTabName(currentMonth,currentYear)
+    ];
+    let csv='';
+    for(const tn of tabNames){
+      try{
+        const url=SALES_SHEET_BASE+encodeURIComponent(tn);
+        console.log('[Slushy] Trying tab: '+tn);
+        const resp=await fetch(url);
+        if(resp.ok){csv=await resp.text();if(csv.length>100){console.log('[Slushy] Got '+csv.length+' chars from: '+tn);break}}
+      }catch(e){}
+    }
+    if(!csv||csv.length<100){console.log('[Slushy] No data from any tab name');return false}
     const rows=parseCSV(csv);
     if(rows.length<8)return false;
 
