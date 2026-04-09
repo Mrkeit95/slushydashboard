@@ -293,7 +293,7 @@ function toast(m){const d=document.createElement('div');d.className='tst tst-ok'
 /* ─── State ─── */
 var tab="overview",sk="tot",sd="desc",ftm="all",ftr="all",crFilter="all";
 var TABS=[{id:"overview",l:"Overview"},{id:"creators",l:"Creators"},{id:"chatters",l:"Chatters"},{id:"pricing",l:"Avg Ticket"},{id:"actions",l:"Actions"},{id:"optimize",l:"⚡ Optimize"},{id:"tasks",l:"Tasks"},{id:"heatmap",l:"Heat Map"},{id:"settings",l:"⚙ Settings"}];
-function switchTab(id){tab=id;document.querySelectorAll('.tc').forEach(e=>e.classList.remove('on'));document.getElementById('t-'+id).classList.add('on');document.querySelectorAll('.tb').forEach((b,i)=>b.classList.toggle('on',TABS[i].id===id));render()}
+function switchTab(id){tab=id;document.querySelectorAll('.tc').forEach(e=>e.classList.remove('on'));document.getElementById('t-'+id).classList.add('on');document.querySelectorAll('#tbar .tb').forEach((b,i)=>{if(TABS[i])b.classList.toggle('on',TABS[i].id===id)});render()}
 function doSort(k){if(sk===k)sd=sd==="desc"?"asc":"desc";else{sk=k;sd="desc"}render()}
 function closeP(){document.getElementById('ov').classList.remove('open');document.getElementById('pnl').classList.remove('open')}
 
