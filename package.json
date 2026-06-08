@@ -1,1 +1,1 @@
-{ "name": "chatstars-slushy", "version": "1.0.0", "private": true }
+{"name":"chatstars-slushy","version":"1.0.0","private":true,"dependencies":{"@vercel/blob":"^2.4.0"}}
