@@ -517,6 +517,34 @@ function recommendedMoves(){
   });
   return moves.sort((a,b)=>a.pri-b.pri||b.c.tot-a.c.tot);
 }
+/* Full discrepancy list — opens in the side panel */
+function discrepancyText(){
+  const disc=(DISCREPANCIES||[]);
+  const lines=['SLUSHY — Data Discrepancies ('+getCurMonthLabel()+')',
+    'Payroll total vs Sales Record captured, per chatter:',''];
+  disc.forEach(d=>lines.push(`${d.name} (${d.team||'—'}): Payroll ${fmt(d.payroll)} | Record ${fmt(d.record)} | Gap ${fmt(d.gap)} | ${d.pct.toFixed(0)}% captured`));
+  lines.push('', `Total: ${disc.length} chatters, ~${fI(disc.reduce((s,d)=>s+d.gap,0))} unaccounted.`);
+  return lines.join('\n');
+}
+function copyDiscrepancies(){
+  const t=discrepancyText();
+  if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(t).then(()=>toast('Copied — paste to send Corn')).catch(()=>toast('Copy failed'));}
+  else{toast('Copy not supported here')}
+}
+function openDiscrepancies(){
+  const disc=(DISCREPANCIES||[]);
+  const totGap=disc.reduce((s,d)=>s+d.gap,0);
+  document.getElementById('ov').classList.add('open');
+  document.getElementById('pnl').classList.add('open');
+  document.getElementById('pT').innerHTML='⚠ Data Discrepancies ('+disc.length+')';
+  document.getElementById('pB').innerHTML=`
+    <p style="font-size:12px;color:var(--m);margin-bottom:6px">Each chatter's <strong>Payroll</strong> tab total vs what the <strong>Sales Record</strong> tab actually captured. A low % means the Sales Record is missing transactions that managers/chatters were supposed to log.</p>
+    <p style="font-size:12px;color:var(--rd);margin-bottom:14px">~${fI(totGap)} unaccounted across ${disc.length} chatters this month.</p>
+    <button class="ns" style="margin-bottom:14px" onclick="copyDiscrepancies()">📋 Copy full list (for Corn)</button>
+    <div class="tw"><table><thead><tr><th>Chatter</th><th>Team</th><th>Payroll</th><th>Record</th><th>Gap</th><th>Captured</th></tr></thead>
+    <tbody>${disc.map(d=>`<tr onclick="openCh(${d.id})"><td style="font-weight:600;font-size:12px">${d.name}</td><td style="color:${teamColor(d.team)};font-size:11px;font-weight:600">${d.team||'—'}</td><td style="font-family:var(--mn);font-size:11px">${fmt(d.payroll)}</td><td style="font-family:var(--mn);font-size:11px;color:var(--am)">${fmt(d.record)}</td><td style="font-family:var(--mn);font-size:11px;color:var(--rd);font-weight:700">${fmt(d.gap)}</td><td style="font-family:var(--mn);font-size:11px;color:${d.pct>=80?'var(--gn)':d.pct>=50?'var(--am)':'var(--rd)'}">${d.pct.toFixed(0)}%</td></tr>`).join('')}</tbody></table></div>`;
+}
+
 function renderInsights(){
   const active=D.filter(c=>c.st==="Active");
   const disc=(DISCREPANCIES||[]);
@@ -534,6 +562,7 @@ function renderInsights(){
     <div style="font-size:22px;font-weight:700;font-family:var(--mn);color:var(--rd);line-height:1">${disc.length}</div>
     <div style="font-size:10px;color:var(--d);margin:2px 0 8px">chatters · ~${fI(discGap)} unaccounted in Sales Record</div>
     ${disc.slice(0,5).map(d=>row(`${d.name} <span style="color:var(--d);font-size:10px">${d.team||''}</span>`,`<span style="color:var(--rd)">${d.pct.toFixed(0)}%</span> · gap ${fI(d.gap)}`,`openCh(${d.id})`)).join('')}
+    <button class="ns" style="margin-top:10px;width:100%" onclick="openDiscrepancies()">View all ${disc.length} discrepancies →</button>
     `:`<div style="font-size:12px;color:var(--gn)">✓ Payroll & Sales Record reconcile</div>`;
 
   // 2) Top performers
