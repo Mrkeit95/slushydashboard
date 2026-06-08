@@ -249,9 +249,12 @@ function enrich(){
     c.sales=c.txCount||0;
     c.avgTicket=c.txCount>0?c.txSales/c.txCount:0;
     c.dailyAvg=dayOfMonth>0?c.tot/dayOfMonth:0;
+    // Projected month-end total at current pace
+    c.projMonth=c.dailyAvg*daysInMonth;
     // Momentum = 2nd half vs 1st half of elapsed days; treat from-zero growth as strong up
     c.momentum=c.f14>0?c.l15/c.f14:(c.l15>0?2:1);
     c.pctGoal=c.goal>0?(c.tot/(c.goal*monthPct)*100):0;
+    c.projVsGoal=c.goal>0?(c.projMonth/c.goal*100):0;
   })
 }
 enrich();
@@ -329,7 +332,7 @@ function openDay(dayNum){
   rankings.forEach(r=>{if(!teamSales[r.team])teamSales[r.team]={sales:0,count:0,chatters:[]};teamSales[r.team].sales+=r.sales;teamSales[r.team].count+=r.count;teamSales[r.team].chatters.push(r)});
 
   document.getElementById('ov').classList.add('open');document.getElementById('pnl').classList.add('open');
-  document.getElementById('pT').innerHTML='March '+dayNum+(isToday?' (Today)':dayNum===26?' (Yesterday)':'');
+  document.getElementById('pT').innerHTML=MONTHS[currentMonth]+' '+dayNum+(isToday?' (Today)':dayNum===(new Date().getDate()-1)?' (Yesterday)':'');
   document.getElementById('pB').innerHTML=`
     <!-- Day Summary -->
     <div style="margin-bottom:20px">
@@ -444,7 +447,7 @@ function openCh(id){
     <div style="margin-bottom:20px"><div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px"><div class="lbl">Decision</div>${stB}</div>
     <div style="padding:14px;border-radius:12px;background:${a.cl}08;border:1px solid ${a.cl}20"><div style="font-size:14px;font-weight:700;color:${a.cl};margin-bottom:3px">${a.l}</div><div style="font-size:12px;color:var(--m)">${a.d}</div></div></div>
     <div style="margin-bottom:20px"><div class="lbl" style="margin-bottom:10px">Performance</div><div class="pg">
-      ${[{l:"March Total",v:fmt(c.tot)},{l:"Goal",v:fmt(c.goal)},{l:"% to Goal",v:c.pctGoal.toFixed(0)+"%",cl:c.pctGoal>=80?'var(--gn)':c.pctGoal>=50?'var(--am)':'var(--rd)'},{l:"Avg Ticket",v:fmt(c.avgTicket),cl:c.avgTicket>=40?'var(--gn)':c.avgTicket<25?'var(--rd)':''},{l:"Sales",v:c.sales},{l:"Daily Avg",v:fmt(c.dailyAvg)},{l:"Momentum",v:(mom>0?'+':'')+mom+'%',cl:c.momentum>=1?'var(--gn)':c.momentum<0.7?'var(--rd)':''},{l:"Team / Shift",v:c.team+' · '+c.shift},{l:"1st Half",v:fmt(c.f14)}].map(x=>`<div class="ps"><div class="dl">${x.l}</div><div class="dv"${x.cl?' style="color:'+x.cl+'"':''}>${x.v}</div></div>`).join('')}
+      ${[{l:MONTHS[currentMonth]+" So Far",v:fmt(c.tot)},{l:"Projected "+MONTHS[currentMonth],v:fmt(c.projMonth),cl:c.projVsGoal>=100?'var(--gn)':c.projVsGoal>=70?'var(--am)':'var(--rd)'},{l:"Goal",v:fmt(c.goal)},{l:"Proj vs Goal",v:c.projVsGoal.toFixed(0)+"%",cl:c.projVsGoal>=100?'var(--gn)':c.projVsGoal>=70?'var(--am)':'var(--rd)'},{l:"Avg Ticket*",v:fmt(c.avgTicket),cl:c.avgTicket>=40?'var(--gn)':c.avgTicket<25&&c.avgTicket>0?'var(--rd)':''},{l:"Daily Avg",v:fmt(c.dailyAvg)},{l:"Momentum",v:(mom>0?'+':'')+mom+'%',cl:c.momentum>=1?'var(--gn)':c.momentum<0.7?'var(--rd)':''},{l:"Team / Shift",v:c.team+' · '+c.shift},{l:"Pace to Goal",v:c.pctGoal.toFixed(0)+"%",cl:c.pctGoal>=80?'var(--gn)':c.pctGoal>=50?'var(--am)':'var(--rd)'}].map(x=>`<div class="ps"><div class="dl">${x.l}</div><div class="dv"${x.cl?' style="color:'+x.cl+'"':''}>${x.v}</div></div>`).join('')}
     </div></div>
     ${c.daily&&c.daily.length?`<div style="margin-bottom:20px"><div class="lbl" style="margin-bottom:8px">Daily (Mar 1–6)</div><div style="display:flex;gap:6px;flex-wrap:wrap">${c.daily.map((v,i)=>`<div style="padding:7px 12px;border-radius:8px;background:var(--s1);border:1px solid var(--b1);text-align:center;flex:1;min-width:65px"><div style="font-size:9px;color:var(--d)">Mar ${i+1}</div><div style="font-size:13px;font-weight:700;font-family:var(--mn);color:${v>0?'var(--t)':'var(--f)'}">${v>0?fmt(v):'—'}</div></div>`).join('')}</div></div>`:''}
     <div style="margin-bottom:16px"><div class="lbl" style="margin-bottom:8px">Actions</div><div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px">
@@ -475,7 +478,7 @@ function openTeam(team){
   document.getElementById('pT').innerHTML=`<span style="color:${TC[team]}">${team}</span> · ${creators.length} creators · ${chatters.length} chatters`;
   document.getElementById('pB').innerHTML=`
     <div style="margin-bottom:20px"><div class="pg">
-      ${[{l:"Total Creator Goals",v:fK(teamGoal)},{l:"Chatter Sales (March)",v:fmt(chatterSales)},{l:"Creators",v:creators.length},{l:"Chatters",v:chatters.length},{l:"Shift Gaps",v:gaps.length?gaps.join(', '):'None',cl:gaps.length?'var(--rd)':'var(--gn)'}].map(x=>`<div class="ps"><div class="dl">${x.l}</div><div class="dv"${x.cl?' style="color:'+x.cl+'"':''}>${x.v}</div></div>`).join('')}
+      ${[{l:"Total Creator Goals",v:fK(teamGoal)},{l:"Chatter Sales ("+MONTHS[currentMonth]+")",v:fmt(chatterSales)},{l:"Creators",v:creators.length},{l:"Chatters",v:chatters.length},{l:"Shift Gaps",v:gaps.length?gaps.join(', '):'None',cl:gaps.length?'var(--rd)':'var(--gn)'}].map(x=>`<div class="ps"><div class="dl">${x.l}</div><div class="dv"${x.cl?' style="color:'+x.cl+'"':''}>${x.v}</div></div>`).join('')}
     </div></div>
     <div style="margin-bottom:20px"><div class="lbl" style="margin-bottom:8px">Shift Coverage</div>
       ${["Morning","Day","Night","Filler-4x","Filler-2x"].map(sh=>{const ch=shifts[sh]||[];if(!ch.length&&!["Morning","Day","Night"].includes(sh))return'';return`<div style="display:flex;align-items:center;gap:10px;padding:8px 12px;border-radius:8px;margin-bottom:5px;background:${ch.length?'var(--s1)':'rgba(255,59,92,0.06)'};border:1px solid ${ch.length?'var(--b1)':'rgba(255,59,92,0.15)'}"><span class="sd ${ch.length?'sc':'sg'}"></span><span style="font-size:12px;font-weight:600;width:70px">${sh}</span><div style="flex:1">${ch.length?ch.map(c=>`<span style="cursor:pointer;margin-right:8px;font-size:11px" onclick="event.stopPropagation();openCh(${c.id})">${tb(getTier(c))} <strong>${c.n}</strong> <span style="color:var(--d)">${fmt(c.avgTicket)} avg</span></span>`).join(''):'<span style="color:var(--rd);font-size:11px;font-weight:600">⚠ NO COVERAGE</span>'}</div></div>`}).join('')}
@@ -627,7 +630,7 @@ function render(){
 
   /* ACTIONS */
   const aL=D.map(c=>({c,...getAct(c)})).filter(a=>a.u<6).sort((a,b)=>a.u-b.u);
-  document.getElementById('t-actions').innerHTML=`<div class="lbl" style="margin-bottom:4px">${aL.filter(a=>a.u<=3).length} Urgent</div><p style="font-size:12px;color:var(--d);margin-bottom:20px">Click to take action.</p>${aL.map(a=>{const c=a.c,t=getTier(c),cs=store[c.id];const stH=cs&&cs.status?` <span class="si ${cs.status.includes('Fired')?'si-r':cs.status.includes('Coaching')||cs.status.includes('Move')?'si-a':'si-p'}">${cs.status}</span>`:'';return`<div class="card" style="padding:14px 18px;margin-bottom:10px;border-left:3px solid ${a.cl};cursor:pointer" onclick="openCh(${c.id})"><div style="display:flex;align-items:flex-start;gap:12px;flex-wrap:wrap"><div style="min-width:100px">${ab(a)}${stH}</div><div style="flex:1;min-width:180px"><div style="font-weight:700;font-size:13px">${c.n}</div><div style="font-size:11px;color:var(--d)">${c.team} · ${c.shift}</div><div style="font-size:12px;color:var(--m);margin-top:3px">${a.d}</div></div><div style="display:flex;gap:14px">${[{l:"March",v:fmt(c.tot)},{l:"Ticket",v:fmt(c.avgTicket),cl:c.avgTicket<25?'var(--rd)':''},{l:"% Goal",v:c.pctGoal.toFixed(0)+"%",cl:c.pctGoal<50?'var(--rd)':''}].map(x=>`<div><div style="font-size:9px;color:var(--d)">${x.l}</div><div style="font-size:11px;font-family:var(--mn);font-weight:600${x.cl?';color:'+x.cl:''}">${x.v}</div></div>`).join('')}</div>${tb(t)}</div></div>`}).join('')}<div style="margin:24px 0 12px;border-top:1px solid var(--b1)"></div><div class="lbl" style="margin-bottom:10px">★ Stars</div><div style="display:flex;gap:10px;flex-wrap:wrap">${D.filter(c=>getTier(c)==="star").sort((a,b)=>b.tot-a.tot).map(c=>`<div class="card" style="padding:14px;flex:1 1 200px;max-width:240px;border-top:2px solid var(--gn);cursor:pointer" onclick="openCh(${c.id})"><div style="font-weight:700;font-size:13px">${c.n}</div><div style="font-size:10px;color:var(--d)">${c.team} · ${c.shift}</div><div style="font-size:16px;font-weight:700;font-family:var(--mn);color:var(--gn);margin-top:4px">${fK(c.tot)}</div></div>`).join('')}</div>`;
+  document.getElementById('t-actions').innerHTML=`<div class="lbl" style="margin-bottom:4px">${aL.filter(a=>a.u<=3).length} Urgent</div><p style="font-size:12px;color:var(--d);margin-bottom:20px">Click to take action.</p>${aL.map(a=>{const c=a.c,t=getTier(c),cs=store[c.id];const stH=cs&&cs.status?` <span class="si ${cs.status.includes('Fired')?'si-r':cs.status.includes('Coaching')||cs.status.includes('Move')?'si-a':'si-p'}">${cs.status}</span>`:'';return`<div class="card" style="padding:14px 18px;margin-bottom:10px;border-left:3px solid ${a.cl};cursor:pointer" onclick="openCh(${c.id})"><div style="display:flex;align-items:flex-start;gap:12px;flex-wrap:wrap"><div style="min-width:100px">${ab(a)}${stH}</div><div style="flex:1;min-width:180px"><div style="font-weight:700;font-size:13px">${c.n}</div><div style="font-size:11px;color:var(--d)">${c.team} · ${c.shift}</div><div style="font-size:12px;color:var(--m);margin-top:3px">${a.d}</div></div><div style="display:flex;gap:14px">${[{l:MONTHS[currentMonth],v:fmt(c.tot)},{l:"Proj",v:fmt(c.projMonth),cl:c.projVsGoal<70?'var(--rd)':c.projVsGoal>=100?'var(--gn)':''},{l:"% Goal",v:c.pctGoal.toFixed(0)+"%",cl:c.pctGoal<50?'var(--rd)':''}].map(x=>`<div><div style="font-size:9px;color:var(--d)">${x.l}</div><div style="font-size:11px;font-family:var(--mn);font-weight:600${x.cl?';color:'+x.cl:''}">${x.v}</div></div>`).join('')}</div>${tb(t)}</div></div>`}).join('')}<div style="margin:24px 0 12px;border-top:1px solid var(--b1)"></div><div class="lbl" style="margin-bottom:10px">★ Stars</div><div style="display:flex;gap:10px;flex-wrap:wrap">${D.filter(c=>getTier(c)==="star").sort((a,b)=>b.tot-a.tot).map(c=>`<div class="card" style="padding:14px;flex:1 1 200px;max-width:240px;border-top:2px solid var(--gn);cursor:pointer" onclick="openCh(${c.id})"><div style="font-weight:700;font-size:13px">${c.n}</div><div style="font-size:10px;color:var(--d)">${c.team} · ${c.shift}</div><div style="font-size:16px;font-weight:700;font-family:var(--mn);color:var(--gn);margin-top:4px">${fK(c.tot)}</div></div>`).join('')}</div>`;
 
   /* TASKS */
   document.getElementById('t-tasks').innerHTML=`
@@ -672,7 +675,7 @@ function render(){
     const t=getTier(c);const tv=TV[c.team]||40;
     if(t==='critical'&&tv>=60&&!terminations.find(x=>x.chatter.id===c.id)){
       const lowerTeam=Object.entries(TV).filter(([t2,v])=>v<tv).sort((a,b)=>a[1]-b[1])[0];
-      moves.push({chatter:c,type:'step-down',priority:0,from:c.team,to:lowerTeam?lowerTeam[0]:'Bench',fromCreator:TCN[c.team],toCreator:lowerTeam?TCN[lowerTeam[0]]:'Remove',reason:c.n+' is CRITICAL tier ('+fmt(c.avgTicket)+' avg ticket, '+fmt(c.tot)+' March total) managing '+TCN[c.team]+'. Every shift on this high-value page is bleeding revenue. A $30+ avg ticket chatter in this slot would generate significantly more.',impact:'Recovering this slot: +$1,500-$3,000/mo',urgency:'URGENT'});
+      moves.push({chatter:c,type:'step-down',priority:0,from:c.team,to:lowerTeam?lowerTeam[0]:'Bench',fromCreator:TCN[c.team],toCreator:lowerTeam?TCN[lowerTeam[0]]:'Remove',reason:c.n+' is CRITICAL tier ('+fmt(c.avgTicket)+' avg ticket, '+fmt(c.tot)+' '+MONTHS[currentMonth]+' total) managing '+TCN[c.team]+'. Every shift on this high-value page is bleeding revenue. A $30+ avg ticket chatter in this slot would generate significantly more.',impact:'Recovering this slot: +$1,500-$3,000/mo',urgency:'URGENT'});
     }
   });
 
@@ -799,7 +802,7 @@ function render(){
           <span class="ab" style="background:var(--rd)15;color:var(--rd)">🔥 TERMINATE</span>
           <span style="font-weight:700;font-size:15px;cursor:pointer" onclick="openCh(${t.chatter.id})">${t.chatter.n}</span>
           ${tb(getTier(t.chatter))}
-          <span style="font-size:11px;color:var(--d)">${t.team} · ${t.shift} · ${fmt(t.avgTicket)} avg · ${fmt(t.revenue)} March</span>
+          <span style="font-size:11px;color:var(--d)">${t.team} · ${t.shift} · ${fmt(t.avgTicket)} avg · ${fmt(t.revenue)} ${MONTHS[currentMonth]}</span>
         </div>
         <div style="font-size:12px;color:var(--m);margin-bottom:12px">${t.reason}. Currently on <strong style="color:${TC[t.team]}">${t.team}</strong> managing ${t.creator}.</div>
         <div style="padding:14px;border-radius:10px;background:rgba(255,255,255,0.02);border:1px solid var(--b1);margin-bottom:10px">
@@ -839,7 +842,7 @@ function render(){
             <div style="display:flex;align-items:center;gap:10px;padding:8px 12px;border-radius:8px;margin-bottom:4px;background:rgba(0,229,155,0.04);cursor:pointer" onclick="openCh(${c.id})">
               <span style="font-weight:600">${c.n}</span>
               <span style="color:${TC[c.team]};font-size:10px">Currently ${c.team}</span>
-              <span style="font-family:var(--mn);font-size:11px;color:var(--gn)">${fmt(c.avgTicket)} avg · ${fmt(c.tot)} March</span>
+              <span style="font-family:var(--mn);font-size:11px;color:var(--gn)">${fmt(c.avgTicket)} avg · ${fmt(c.tot)} ${MONTHS[currentMonth]}</span>
               ${tb(getTier(c))}
             </div>
           `).join('')}
@@ -981,7 +984,20 @@ function render(){
 
   /* HEATMAP */
   const mxS=Math.max(...MD.flatMap(d=>d.h));
-  document.getElementById('t-heatmap').innerHTML=`<div class="lbl" style="margin-bottom:16px">2-Hour Sales Heat Map</div><div class="tw"><table><thead><tr><th style="position:sticky;left:0;z-index:2;background:#150D0D">Date</th>${TS.map(t=>`<th style="text-align:center;font-size:8px">${t}</th>`).join('')}<th style="text-align:right">Total</th></tr></thead><tbody>${MD.map(d=>`<tr><td style="padding:5px 8px;font-size:10px;font-family:var(--mn);color:${d.d===26?'var(--pk)':'var(--m)'};position:sticky;left:0;background:#150D0D;z-index:1">Mar ${d.d}</td>${d.h.map(v=>{const i=v/mxS;const bg=v===0?'rgba(255,255,255,0.01)':i>0.7?`rgba(255,60,172,${.15+i*.4})`:i>0.3?`rgba(255,107,53,${.08+i*.25})`:`rgba(255,255,255,${.02+i*.08})`;return`<td class="heatcell" style="color:${v===0?'#333':i>.5?'#fff':'var(--m)'};background:${bg}">${v>0?(v>=1000?(v/1000).toFixed(1)+'k':Math.round(v)):'—'}</td>`}).join('')}<td style="padding:5px 8px;text-align:right;font-size:10px;font-family:var(--mn);font-weight:600;color:${d.s>ME.dg?'var(--gn)':'var(--t)'}">${fK(d.s)}</td></tr>`).join('')}</tbody></table></div>`;
+  const mxDay=Math.max(...MD.map(d=>d.s),1);const todayD=new Date().getDate();
+  const daysWithData=MD.filter(d=>d.s>0);
+  const bestDay=daysWithData.length?daysWithData.reduce((a,b)=>b.s>a.s?b:a):null;
+  document.getElementById('t-heatmap').innerHTML=`<div class="lbl" style="margin-bottom:6px">${getCurMonthLabel()} — Daily Sales Heat Map</div>
+    <p style="font-size:12px;color:var(--d);margin-bottom:16px">${daysWithData.length} active days · best ${bestDay?MONTH_SHORT[currentMonth]+' '+bestDay.d+' ('+fK(bestDay.s)+')':'—'} · daily goal ${fK(ME.dg||0)}</p>
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(96px,1fr));gap:8px">
+    ${MD.map(d=>{const i=d.s/mxDay;const isToday=d.d===todayD;const future=d.d>todayD;const hit=d.s>=(ME.dg||0)&&ME.dg>0;
+      const bg=future?'rgba(255,255,255,0.015)':d.s===0?'rgba(255,59,92,0.05)':`rgba(255,60,172,${.08+i*.5})`;
+      return `<div onclick="openDay(${d.d})" style="cursor:pointer;padding:10px 12px;border-radius:10px;background:${bg};border:1px solid ${isToday?'var(--pk)':'var(--b1)'}">
+        <div style="font-size:10px;color:var(--d);font-family:var(--mn)">${MONTH_SHORT[currentMonth]} ${d.d}${isToday?' •':''}</div>
+        <div style="font-size:15px;font-weight:700;font-family:var(--mn);margin-top:4px;color:${future?'var(--f)':d.s===0?'var(--rd)':'var(--t)'}">${future?'—':d.s>0?fK(d.s):'$0'}</div>
+        <div style="font-size:9px;color:${hit?'var(--gn)':d.s>0?'var(--am)':'var(--d)'}">${future?'':hit?'▲ goal':d.s>0?'below goal':'no sales'}</div>
+      </div>`}).join('')}
+    </div>`;
 
   /* SETTINGS */
   const db=getUserDB();const userList=Object.entries(db);const has2FA=U&&db[U.k]&&db[U.k].pin;
