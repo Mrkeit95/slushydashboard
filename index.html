@@ -304,7 +304,7 @@ function saveNote(id,text){const s=gS();if(!s[id])s[id]={notes:[],actions:[],sta
 function delNote(cid,nid){if(!isA()){toast("Admin only");return}const s=gS();if(s[cid])s[cid].notes=s[cid].notes.filter(n=>n.id!==nid);sS(s);openCh(cid)}
 function saveActn(id,a,d){const s=gS();if(!s[id])s[id]={notes:[],actions:[],status:null};s[id].actions.unshift({a,d,time:new Date().toLocaleString(),by:U.n});s[id].status=a;sS(s);toast(a);openCh(id);render()}
 function gT(){try{return JSON.parse(localStorage.getItem('st7')||'[]')}catch(e){return[]}}
-function sT(t){localStorage.setItem('st7',JSON.stringify(t))}
+function sT(t){try{localStorage.setItem('st7',JSON.stringify(t))}catch(e){toast('⚠ Could not save task (storage blocked)')}}
 function addTask(text,pri,cid){const t=gT();t.unshift({id:Date.now(),text,pri,cid:cid||0,done:false,created:new Date().toLocaleString(),by:U.n,updates:[]});sT(t);render()}
 function togTask(id){const t=gT();const tk=t.find(x=>x.id===id);if(tk)tk.done=!tk.done;sT(t);render()}
 function delTask(id){if(!isA()){toast("Admin only");return}sT(gT().filter(x=>x.id!==id));render()}
