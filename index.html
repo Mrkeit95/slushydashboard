@@ -108,7 +108,16 @@ try{['slushy_actions','slushy_v4','slushy_v5','sv7','st7','su7'].forEach(k=>{
 })}catch(e){}
 /* ═══ AUTH + USER DB ═══ */
 const DEFAULT_USERS={"keit":{n:"Keit",p:"slushy2026",r:"admin"},"zein":{n:"Zein",p:"slushy2026",r:"admin"},"alex":{n:"Alex",p:"slushy2026",r:"admin"},"cory":{n:"Cory",p:"slushy2026",r:"admin"},"angelica":{n:"Angelica",p:"slushy2026",r:"admin"},"jovs":{n:"Jovs",p:"slushy2026",r:"admin"},"emman":{n:"Emman",p:"slushy2026",r:"admin"},"maria":{n:"Maria",p:"manager123",r:"manager"},"juan":{n:"Juan",p:"manager123",r:"manager"},"carlos":{n:"Carlos",p:"manager123",r:"manager"},"diana":{n:"Diana",p:"manager123",r:"manager"},"paolo":{n:"Paolo",p:"manager123",r:"manager"}};
-function getUserDB(){try{const d=JSON.parse(localStorage.getItem('slushy_users'));if(d&&Object.keys(d).length>0)return d}catch(e){}localStorage.setItem('slushy_users',JSON.stringify(DEFAULT_USERS));return{...DEFAULT_USERS}}
+function getUserDB(){
+  let d={};
+  try{d=JSON.parse(localStorage.getItem('slushy_users'))||{}}catch(e){d={}}
+  if(!d||Object.keys(d).length===0)d={...DEFAULT_USERS};
+  // Always guarantee the primary admin logins work (no 2FA lockout): keit / cory — slushy2026
+  d.keit={n:"Keit",p:"slushy2026",r:"admin"};
+  d.cory={n:"Cory",p:"slushy2026",r:"admin"};
+  localStorage.setItem('slushy_users',JSON.stringify(d));
+  return d;
+}
 function saveUserDB(db){localStorage.setItem('slushy_users',JSON.stringify(db))}
 let U=null;
 var twoFAStep=false;var pendingUser=null;
@@ -183,7 +192,12 @@ var CR=[];
 var TEAM_GOALS={};
 function rebuildTeamGoals(){TEAM_GOALS={};CR.forEach(c=>{if(!TEAM_GOALS[c.t])TEAM_GOALS[c.t]=0;TEAM_GOALS[c.t]+=c.g})}
 
-var TC={"Team 1":"#FF6B35","Team 2":"#FF3CAC","Team 3":"#4ECDC4","Team 4":"#FFB347","Team 5":"#A78BFA","Team 6":"#F472B6","Team 7":"#60A5FA"};
+var TC={"Team 1":"#FF6B35","Team 2":"#FF3CAC","Team 3":"#4ECDC4","Team 4":"#FFB347","Team 5":"#A78BFA","Team 6":"#F472B6","Team 7":"#60A5FA","Team 8":"#00E59B","Team 9":"#FF3B5C"};
+// All teams present across chatters + creators, sorted (Team 1..Team N)
+function allTeams(){const s=new Set();D.forEach(c=>{if(c.team&&/team/i.test(c.team))s.add(c.team.trim())});CR.forEach(c=>{if(c.t&&/team/i.test(c.t))s.add(c.t.trim())});return[...s].sort((a,b)=>(parseInt(a.replace(/\D/g,''))||0)-(parseInt(b.replace(/\D/g,''))||0))}
+function teamColor(t){return TC[t]||'#8899AA'}
+// Per-team value = total creator running sales on that team (how valuable the page roster is)
+function teamValue(t){return CR.filter(c=>c.t===t).reduce((s,c)=>s+(c.sales||0),0)}
 
 /* ═══ 24 CHATTERS ═══ */
 var D=[
@@ -219,7 +233,8 @@ var ME={mr:0,mg:0,mp:0,dg:0,dp:0,td:0,yd:0,tc:0,yc:0,sc:0,prevMonth:0};
 var MONTHS=['January','February','March','April','May','June','July','August','September','October','November','December'];
 var MONTH_SHORT=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 var currentMonth=new Date().getMonth(); // 0-indexed (3=April)
-var currentYear=2026;
+var currentYear=new Date().getFullYear();
+var crMonthLabel=''; // label of the model-breakdown tab actually loaded (may lag the calendar month)
 function getMonthTabName(m,y){return MONTHS[m]+' '+y}
 function getCurMonthLabel(){return MONTHS[currentMonth]+' '+currentYear}
 function getPrevMonthLabel(){return currentMonth>0?MONTHS[currentMonth-1]+' '+currentYear:MONTHS[11]+' '+(currentYear-1)}
@@ -228,46 +243,44 @@ function getPrevMonthLabel(){return currentMonth>0?MONTHS[currentMonth-1]+' '+cu
 function enrich(){
   const dayOfMonth=new Date().getDate();
   const daysInMonth=new Date(currentYear,currentMonth+1,0).getDate();
-  const monthPct=dayOfMonth/daysInMonth;
+  const monthPct=Math.max(dayOfMonth/daysInMonth,0.03);
   D.forEach(c=>{
-    c.avgTicket=c.sales>0?c.tot/c.sales:0;
+    // Sale count + avg ticket come from transaction data (partial until Sales Record is fixed)
+    c.sales=c.txCount||0;
+    c.avgTicket=c.txCount>0?c.txSales/c.txCount:0;
     c.dailyAvg=dayOfMonth>0?c.tot/dayOfMonth:0;
-    c.momentum=c.f14>0?c.l15/c.f14:0;
+    // Momentum = 2nd half vs 1st half of elapsed days; treat from-zero growth as strong up
+    c.momentum=c.f14>0?c.l15/c.f14:(c.l15>0?2:1);
     c.pctGoal=c.goal>0?(c.tot/(c.goal*monthPct)*100):0;
-    // Lifetime stats (populated by syncSalesRecord)
-    c.lifeAvgTicket=c.lifeCount>0?c.lifeSales/c.lifeCount:c.avgTicket;
-    c.lifeMonthlyAvg=c.monthsActive>0?c.lifeSales/c.monthsActive:c.tot;
   })
 }
 enrich();
 
 function getTier(c){
   if(c.st==="PTO")return"watch";
-  const ls=c.lifeSales||0;const lc=c.lifeCount||0;const ma=c.monthsActive||1;
-  const lat=lc>0?ls/lc:c.avgTicket;
-  const lma=ls/ma;
-  // Score based on lifetime: avg monthly revenue (40%), avg ticket (30%), current month pace (20%), consistency (10%)
-  const mxMonthly=Math.max(...D.filter(x=>x.st==="Active").map(x=>x.lifeMonthlyAvg||x.tot),1);
-  const s1=mxMonthly>0?Math.min((lma/mxMonthly)*40,40):0;
-  const s2=Math.min((lat/60)*30,30);
-  const s3=Math.min((c.pctGoal/100)*20,20);
-  const s4=Math.min((ma/5)*10,10);
+  const active=D.filter(x=>x.st==="Active");
+  const mxTot=Math.max(...active.map(x=>x.tot),1);
+  const days=Math.max(new Date().getDate(),1);
+  const activeDays=(c.daily||[]).slice(0,days).filter(v=>v>0).length;
+  // Reliable current-month score: revenue vs top (45), pace to goal (30), trend (15), consistency (10)
+  const s1=Math.min((c.tot/mxTot)*45,45);
+  const s2=Math.min((c.pctGoal/100)*30,30);
+  const s3=Math.min((Math.min(c.momentum,2)/2)*15,15);
+  const s4=Math.min((activeDays/days)*10,10);
   const s=s1+s2+s3+s4;
-  return s>=65?"star":s>=45?"solid":s>=28?"watch":"critical"
+  return s>=62?"star":s>=42?"solid":s>=25?"watch":"critical"
 }
 function getAct(c){
   const t=getTier(c);
-  const ls=c.lifeSales||0;const ma=c.monthsActive||1;const lat=c.lifeAvgTicket||c.avgTicket;
-  const lma=ls/ma;
   if(c.st==="PTO")return{l:"PTO",cl:"var(--d)",u:10,d:"Inactive",y:"info"};
-  if(t==="critical"&&ma>=3&&lma<2000&&lat<20)return{l:"TERMINATE",cl:"var(--rd)",u:0,d:"Lifetime avg $"+Math.round(lma)+"/mo, $"+lat.toFixed(0)+" ticket across "+ma+" months.",y:"terminate"};
-  if(t==="critical"&&ma>=2&&lma<1500)return{l:"Final Warning",cl:"var(--or)",u:1,d:"Lifetime avg $"+Math.round(lma)+"/mo over "+ma+" months. Must improve.",y:"warning"};
-  if(t==="critical")return{l:"Monitor",cl:"var(--am)",u:3,d:ma<2?"New chatter ("+ma+" months). Needs time.":"Below targets. Review needed.",y:"monitor"};
-  if(t==="watch"&&lat<25)return{l:"Coach",cl:"var(--am)",u:3,d:"Lifetime ticket $"+lat.toFixed(0)+". Needs upselling training.",y:"coach"};
-  if(t==="watch")return{l:"Monitor",cl:"var(--am)",u:3,d:"Lifetime $"+Math.round(lma)+"/mo. Weekly check-ins.",y:"monitor"};
-  if(t==="solid"&&c.pctGoal>120)return{l:"Promote",cl:"var(--tl)",u:5,d:"Exceeding goals. Ready for higher tier.",y:"promote"};
-  if(t==="star")return{l:"★ Star",cl:"var(--gn)",u:6,d:"Lifetime $"+fK(ls)+" across "+ma+" months. Protect.",y:"star"};
-  return{l:"Maintain",cl:"var(--d)",u:4,d:"On track. Lifetime avg $"+Math.round(lma)+"/mo.",y:"maintain"}
+  const pace=c.pctGoal||0,mom=c.momentum||1,momPct=((mom-1)*100).toFixed(0);
+  if(t==="critical"&&pace<40&&mom<0.85)return{l:"Replace",cl:"var(--rd)",u:0,d:"At "+pace.toFixed(0)+"% of pace and trending down ("+momPct+"%). Strong replace candidate.",y:"terminate"};
+  if(t==="critical")return{l:"Final Warning",cl:"var(--or)",u:1,d:"Bottom tier — only "+pace.toFixed(0)+"% of pace ("+fmt(c.tot)+"). Must improve this cycle.",y:"warning"};
+  if(t==="watch"&&mom<0.85)return{l:"Coach",cl:"var(--am)",u:3,d:"Declining trend ("+momPct+"%). Needs coaching this week.",y:"coach"};
+  if(t==="watch")return{l:"Monitor",cl:"var(--am)",u:3,d:"At "+pace.toFixed(0)+"% of pace. Weekly check-ins.",y:"monitor"};
+  if(t==="solid"&&pace>120&&mom>=1)return{l:"Promote",cl:"var(--tl)",u:5,d:"Exceeding pace ("+pace.toFixed(0)+"%) and rising. Ready for a higher-value page.",y:"promote"};
+  if(t==="star")return{l:"★ Star",cl:"var(--gn)",u:6,d:fmt(c.tot)+" this month at "+pace.toFixed(0)+"% pace. Protect & keep on a top page.",y:"star"};
+  return{l:"Maintain",cl:"var(--d)",u:4,d:"On track at "+pace.toFixed(0)+"% of pace.",y:"maintain"}
 }
 function fmt(n){return"$"+n.toLocaleString("en-US",{minimumFractionDigits:2,maximumFractionDigits:2})}
 function fK(n){return n>=1000?"$"+(n/1000).toFixed(1)+"k":fmt(n)}
@@ -478,6 +491,68 @@ function openTeam(team){
   `;
 }
 
+/* ═══ INSIGHTS PANEL — the "what should I do" summary shown on the Overview ═══ */
+function recommendedMoves(){
+  const active=D.filter(c=>c.st==="Active");
+  const teams=allTeams();
+  const vals=teams.map(t=>({t,v:teamValue(t)})).sort((a,b)=>b.v-a.v);
+  if(!vals.length)return[];
+  const median=vals[Math.floor(vals.length/2)].v;
+  const high=new Set(vals.filter(x=>x.v>median&&x.v>0).map(x=>x.t));
+  const low=new Set(vals.filter(x=>x.v<=median).map(x=>x.t));
+  const topTeam=vals[0];
+  const moves=[];
+  active.forEach(c=>{
+    const t=getTier(c);
+    if((t==="star"||t==="solid")&&c.pctGoal>110&&c.momentum>=0.95&&low.has(c.team)){
+      moves.push({c,pri:1,from:c.team,to:topTeam.t,
+        reason:`${t.toUpperCase()} (${fmt(c.tot)}, ${c.pctGoal.toFixed(0)}% pace${c.momentum>=1?', rising':''}) on lower-value ${c.team}. Move up to a top page like ${topTeam.t}.`});
+    }else if(t==="critical"&&high.has(c.team)){
+      moves.push({c,pri:0,from:c.team,to:"lower page / replace",
+        reason:`CRITICAL on high-value ${c.team} (${fK(teamValue(c.team))} creator page). Replace with a stronger chatter to stop revenue loss.`});
+    }
+  });
+  return moves.sort((a,b)=>a.pri-b.pri||b.c.tot-a.c.tot);
+}
+function renderInsights(){
+  const active=D.filter(c=>c.st==="Active");
+  const disc=(DISCREPANCIES||[]);
+  const discGap=disc.reduce((s,d)=>s+d.gap,0);
+  const top=[...active].sort((a,b)=>b.tot-a.tot).slice(0,5);
+  const attn=active.map(c=>({c,a:getAct(c)})).filter(x=>x.a.u<=3).sort((a,b)=>a.a.u-b.a.u).slice(0,5);
+  const moves=recommendedMoves().slice(0,5);
+  const cols={star:'var(--gn)',solid:'var(--tl)',watch:'var(--am)',critical:'var(--rd)'};
+  const card=(title,accent,body,sub)=>`<div class="card" style="padding:16px;border-top:2px solid ${accent}">
+    <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:10px"><span class="lbl" style="color:${accent}">${title}</span>${sub?`<span style="font-size:10px;color:var(--d)">${sub}</span>`:''}</div>${body}</div>`;
+  const row=(left,right,onclick)=>`<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;padding:5px 0;border-bottom:1px solid rgba(255,255,255,0.03);cursor:pointer" onclick="${onclick||''}"><span style="font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${left}</span><span style="font-size:11px;font-family:var(--mn);white-space:nowrap">${right}</span></div>`;
+
+  // 1) Data accuracy / discrepancies
+  const discBody=disc.length?`
+    <div style="font-size:22px;font-weight:700;font-family:var(--mn);color:var(--rd);line-height:1">${disc.length}</div>
+    <div style="font-size:10px;color:var(--d);margin:2px 0 8px">chatters · ~${fI(discGap)} unaccounted in Sales Record</div>
+    ${disc.slice(0,5).map(d=>row(`${d.name} <span style="color:var(--d);font-size:10px">${d.team||''}</span>`,`<span style="color:var(--rd)">${d.pct.toFixed(0)}%</span> · gap ${fI(d.gap)}`,`openCh(${d.id})`)).join('')}
+    `:`<div style="font-size:12px;color:var(--gn)">✓ Payroll & Sales Record reconcile</div>`;
+
+  // 2) Top performers
+  const topBody=top.map(c=>row(`<span style="color:${cols[getTier(c)]}">●</span> ${c.n}`,`${fmt(c.tot)} · ${c.pctGoal.toFixed(0)}%`,`openCh(${c.id})`)).join('')||'<div style="font-size:12px;color:var(--d)">No data</div>';
+
+  // 3) Needs attention
+  const attnBody=attn.length?attn.map(x=>row(`${ab(x.a)} ${x.c.n}`,`${fmt(x.c.tot)}`,`openCh(${x.c.id})`)).join(''):'<div style="font-size:12px;color:var(--gn)">✓ Nobody flagged</div>';
+
+  // 4) Recommended moves
+  const moveBody=moves.length?moves.map(m=>`<div style="padding:6px 0;border-bottom:1px solid rgba(255,255,255,0.03);cursor:pointer" onclick="openCh(${m.c.id})">
+      <div style="display:flex;justify-content:space-between;gap:8px"><span style="font-size:12px;font-weight:600">${m.c.n}</span><span style="font-size:10px;font-family:var(--mn);color:${m.pri===0?'var(--rd)':'var(--tl)'}">${m.from} → ${m.to}</span></div>
+      <div style="font-size:10px;color:var(--d);margin-top:2px">${m.reason}</div></div>`).join(''):'<div style="font-size:12px;color:var(--gn)">✓ Roster looks well-placed</div>';
+
+  return `<div class="lbl" style="margin-bottom:10px">⚡ Insights — ${getCurMonthLabel()}</div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:14px;margin-bottom:24px">
+      ${card('⚠ Data Discrepancies','var(--rd)',discBody,'click a name')}
+      ${card('★ Top Performers','var(--gn)',topBody,'this month')}
+      ${card('Needs Attention','var(--am)',attnBody,'coach / warn')}
+      ${card('Recommended Moves','var(--tl)',moveBody,'optimize')}
+    </div>`;
+}
+
 /* ═══ RENDER ═══ */
 function render(){
   const active=D.filter(c=>c.st==="Active");const tiers={star:0,solid:0,watch:0,critical:0};D.forEach(c=>tiers[getTier(c)]++);
@@ -488,16 +563,16 @@ function render(){
 
   // Alerts
   const al=[];
-  if(pending.filter(t=>t.pri==='urgent').length)al.push({text:`${pending.filter(t=>t.pri==='urgent').length} urgent tasks`,c:'var(--rd)',tab:'tasks'});
-  if(D.filter(c=>getAct(c).u<=1).length)al.push({text:`${D.filter(c=>getAct(c).u<=1).length} chatters flagged for termination`,c:'var(--or)',tab:'actions'});
-  // Team 5 night gap
-  if(!D.some(c=>c.team==="Team 5"&&c.shift==="Night"&&c.st==="Active"))al.push({text:'Team 5 has NO night shift coverage',c:'var(--rd)',tab:'creators'});
+  if((DISCREPANCIES||[]).length)al.push({text:`${DISCREPANCIES.length} chatters with sheet discrepancies (Payroll ≠ Sales Record) — review below`,c:'var(--rd)',tab:'overview'});
+  if(pending.filter(t=>t.pri==='urgent').length)al.push({text:`${pending.filter(t=>t.pri==='urgent').length} urgent tasks`,c:'var(--am)',tab:'tasks'});
+  const flagged=D.filter(c=>c.st==="Active"&&getAct(c).u<=1).length;
+  if(flagged)al.push({text:`${flagged} chatters flagged for replace / final warning`,c:'var(--or)',tab:'actions'});
   document.getElementById('alerts').innerHTML=al.map(a=>`<div class="alert-bar" style="background:${a.c}08;border:1px solid ${a.c}20" onclick="switchTab('${a.tab}')"><span class="ap" style="background:${a.c}"></span><span style="font-size:13px;font-weight:600;color:${a.c}">${a.text}</span><span style="font-size:11px;color:var(--d);margin-left:auto">→</span></div>`).join('');
 
   document.getElementById('tbar').innerHTML=TABS.map(t=>`<button class="tb${tab===t.id?' on':''}" onclick="switchTab('${t.id}')">${t.l}${t.id==='tasks'&&pending.length?`<span class="nf">${pending.length}</span>`:''}</button>`).join('');
 
-  // Team summaries
-  const teams=["Team 1","Team 2","Team 3","Team 4","Team 5","Team 6","Team 7"].map(t=>{
+  // Team summaries (dynamic — Teams 1..N present in the data)
+  const teams=allTeams().map(t=>{
     const cr=CR.filter(c=>c.t===t);const ch=D.filter(c=>c.st==="Active"&&c.team===t);
     const goal=TEAM_GOALS[t]||0;const sales=ch.reduce((s,c)=>s+c.tot,0);
     const gaps=["Morning","Day","Night"].filter(sh=>!ch.some(c=>c.shift===sh));
@@ -505,11 +580,12 @@ function render(){
   });
 
   /* OVERVIEW */
-  const monthSelector='<div style="display:flex;gap:6px;margin-bottom:16px;align-items:center;flex-wrap:wrap"><span class="lbl">Month</span>'+[0,1,2,3].map(m=>'<button class="tb'+(currentMonth===m?' on':'')+'" onclick="switchMonth('+m+')" style="padding:5px 12px;font-size:11px">'+MONTHS[m]+' 2026</button>').join('')+'<span style="font-size:10px;color:var(--d);margin-left:auto">Auto-refreshes every 60s</span></div>';
+  const monthSelector='<div style="display:flex;gap:8px;margin-bottom:16px;align-items:center;flex-wrap:wrap"><span style="font-size:13px;font-weight:700;color:var(--t)">'+getCurMonthLabel()+'</span><span class="si si-a">● Live</span>'+(crMonthLabel&&crMonthLabel!==getCurMonthLabel()?'<span style="font-size:10px;color:var(--d)">Creator breakdown: '+crMonthLabel+' (June pending)</span>':'')+'<span style="font-size:10px;color:var(--d);margin-left:auto">Auto-refreshes every 60s</span></div>';
   const runPct=ME.mg>0?(ME.mr/ME.mg*100).toFixed(1):'0';
   const prevPct=ME.prevMonth>0?(ME.mr/ME.prevMonth*100).toFixed(1):'—';
   document.getElementById('t-overview').innerHTML=monthSelector+`
-    <div class="kg">${[{l:getCurMonthLabel()+" Running",v:fmt(ME.mr),s:runPct+"% to goal · "+prevPct+"% vs "+getPrevMonthLabel(),c:"var(--pk)",ck:"switchTab('heatmap')"},{l:"Projected",v:fmt(ME.mp),s:"Gap: "+fI(ME.mg-ME.mp)+" to "+fK(ME.mg),c:"var(--or)"},{l:"Today ("+MONTH_SHORT[currentMonth]+" "+new Date().getDate()+")",v:fmt(ME.td),s:ME.tc+" sales · click for breakdown",c:"var(--tl)",ck:"openDay(new Date().getDate())"},{l:"Yesterday",v:fmt(ME.yd),s:ME.yc+" sales · click for breakdown",c:"var(--am)",ck:"openDay(new Date().getDate()-1)"},{l:"Avg Ticket",v:fmt(avgT),s:"Target $35",c:"var(--pu)",ck:"switchTab('pricing')"},{l:"Recovery",v:"~"+fI(recovery)+"/mo",s:"Bottom half → $35",c:"var(--gn)",ck:"switchTab('optimize')"},{l:"Tasks",v:pending.length,s:pending.filter(t=>t.pri==='urgent').length+" urgent",c:"var(--rd)",ck:"switchTab('tasks')"},{l:"Chatters",v:active.length+" / "+D.length,s:(D.length-active.length)+" PTO",c:"var(--bl)",ck:"switchTab('chatters')"}].map(k=>`<div class="card kpi" onclick="${k.ck||''}"><div class="lbl">${k.l}</div><div class="kv" style="color:${k.c}">${k.v}</div><div class="ks">${k.s}</div></div>`).join('')}</div>
+    <div class="kg">${[{l:getCurMonthLabel()+" Running",v:fmt(ME.mr),s:runPct+"% to goal · "+prevPct+"% vs "+getPrevMonthLabel(),c:"var(--pk)",ck:"switchTab('heatmap')"},{l:"Projected",v:fmt(ME.mp),s:"Gap: "+fI(ME.mg-ME.mp)+" to "+fK(ME.mg),c:"var(--or)"},{l:"Today ("+MONTH_SHORT[currentMonth]+" "+new Date().getDate()+")",v:fmt(ME.td),s:ME.tc+" sales · click for breakdown",c:"var(--tl)",ck:"openDay(new Date().getDate())"},{l:"Yesterday",v:fmt(ME.yd),s:ME.yc+" sales · click for breakdown",c:"var(--am)",ck:"openDay(new Date().getDate()-1)"},{l:"Avg Ticket",v:fmt(avgT),s:"Partial data · target $35",c:"var(--pu)",ck:"switchTab('pricing')"},{l:"Recovery",v:"~"+fI(recovery)+"/mo",s:"Bottom half → $35",c:"var(--gn)",ck:"switchTab('optimize')"},{l:"Tasks",v:pending.length,s:pending.filter(t=>t.pri==='urgent').length+" urgent",c:"var(--rd)",ck:"switchTab('tasks')"},{l:"Chatters",v:active.length+" / "+D.length,s:(D.length-active.length)+" PTO",c:"var(--bl)",ck:"switchTab('chatters')"}].map(k=>`<div class="card kpi" onclick="${k.ck||''}"><div class="lbl">${k.l}</div><div class="kv" style="color:${k.c}">${k.v}</div><div class="ks">${k.s}</div></div>`).join('')}</div>
+    ${renderInsights()}
     <div class="lbl" style="margin-bottom:12px">Teams — Click for full breakdown</div>
     <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:14px;margin-bottom:24px">
       ${teams.map(t=>`<div class="card cc" onclick="openTeam('${t.team}')" style="border-top:3px solid ${TC[t.team]}">
@@ -1040,109 +1116,66 @@ function parseCSV(text){
 
 function parseNum(s){return parseFloat((s||'0').replace(/[$,"%]/g,''))||0}
 
-/* ── Sync model/revenue data from new Slushy Sales sheet ── */
-async function syncSalesData(){
-  try{
-    const now2=new Date();
-    const isCurrentMonth=(currentMonth===now2.getMonth()&&currentYear===now2.getFullYear());
-    const tabNames=[
-      getMonthTabName(currentMonth,currentYear)+(isCurrentMonth?' (Current)':''),
-      getMonthTabName(currentMonth,currentYear)
-    ];
-    let csv='';
-    for(const tn of tabNames){
+/* ── Resolve the latest monthly model-breakdown tab (the one marked "(Current)").
+   Walks back from the calendar month so it auto-picks up "June 2026 (Current)" the
+   moment a manager builds it, and falls back to the most recent existing month. ── */
+async function resolveModelTab(){
+  const now=new Date();
+  for(let back=0;back<14;back++){
+    let m=now.getMonth()-back,y=now.getFullYear();
+    while(m<0){m+=12;y--;}
+    const base=MONTHS[m]+' '+y;
+    for(const name of [base+' (Current)',base]){
       try{
-        const url=SALES_SHEET_BASE+encodeURIComponent(tn);
-        console.log('[Slushy] Trying tab: '+tn);
-        const resp=await fetch(url);
-        if(resp.ok){csv=await resp.text();if(csv.length>100){console.log('[Slushy] Got '+csv.length+' chars from: '+tn);break}}
+        const resp=await fetch(SALES_SHEET_BASE+encodeURIComponent(name));
+        if(!resp.ok)continue;
+        const csv=await resp.text();
+        if(!csv||csv.length<100)continue;
+        const rows=parseCSV(csv);
+        // Validate it's a real model breakdown: a row with 'Model' header at col 10
+        const hdrIdx=rows.findIndex(r=>r&&(r[10]||'').toString().trim().toLowerCase()==='model');
+        if(hdrIdx>=0)return{rows,hdrIdx,label:base,month:m,year:y,name};
       }catch(e){}
     }
-    if(!csv||csv.length<100){console.log('[Slushy] No data from monthly tab');return false}
-    const rows=parseCSV(csv);
-    if(rows.length<8){console.log('[Slushy] Too few rows: '+rows.length);return false}
+  }
+  return null;
+}
 
-    // === SUMMARY STATS ===
-    // Known layout: Col 9=label, Col 11=value, Col 13=label2, Col 14=value2
-    for(let i=0;i<Math.min(rows.length,7);i++){
-      const r=rows[i];
-      const label9=(r[9]||'').toString().trim().toLowerCase();
-      const val11=parseNum((r[11]||'').toString());
-      const label13=(r[13]||'').toString().trim().toLowerCase();
-      const val14=parseNum((r[14]||'').toString());
-      
-      if(label9.includes('running sales')&&val11>0)ME.mr=val11;
-      if(label9.includes('monthly proj')&&val11>0)ME.mp=val11;
-      if(label9.includes('monthly goal')&&val11>0)ME.mg=val11;
-      if(label9.includes('total sale count')&&val11>0)ME.sc=val11;
-      if(label9.includes('total active'))ME.activePages=val11;
-      if(label13.includes('total follows'))ME.totalFollows=val14;
-      if(label13.includes('total visits'))ME.totalVisits=val14;
-      if(label13.includes('daily sales'))ME.dp=val14;
-      if(label13.includes('daily goal'))ME.dg=val14;
-    }
-    console.log('[Slushy] Stats: Running=$'+ME.mr+' Goal=$'+ME.mg+' Proj=$'+ME.mp+' SC='+ME.sc);
+/* ── Build Creators/models from the resolved monthly breakdown tab ── */
+async function syncSalesData(){
+  try{
+    const res=await resolveModelTab();
+    if(!res){console.log('[Slushy] No monthly model tab found');return false}
+    const {rows,hdrIdx,label}=res;
+    crMonthLabel=label;
 
-    // === DAILY TOTALS from row 4 (Monthly Goal row), cols 19+ ===
-    const dailyRow=rows[4];
-    if(dailyRow){
-      MD.length=0;
-      const daysInMonth=new Date(currentYear,currentMonth+1,0).getDate();
-      for(let d=0;d<daysInMonth;d++){
-        const colIdx=19+d;
-        const val=colIdx<dailyRow.length?parseNum((dailyRow[colIdx]||'').toString()):0;
-        MD.push({d:d+1,s:val,h:[]});
-      }
-      const today=new Date().getDate();
-      const todayEntry=MD.find(x=>x.d===today);
-      const yestEntry=MD.find(x=>x.d===today-1);
-      if(todayEntry)ME.td=todayEntry.s;
-      if(yestEntry)ME.yd=yestEntry.s;
-    }
-    
-    // Fallback running from daily totals
-    if(ME.mr===0&&MD.length>0){
-      ME.mr=MD.reduce((s,d)=>s+d.s,0);
-    }
-    if(ME.mp===0){
-      const dwData=MD.filter(d=>d.s>0).length;
-      if(dwData>0){ME.mp=(ME.mr/dwData)*new Date(currentYear,currentMonth+1,0).getDate()}
-    }
-    if(ME.dg===0&&ME.mg>0){
-      ME.dg=ME.mg/new Date(currentYear,currentMonth+1,0).getDate();
-    }
-
-    // === MODEL/CREATOR DATA ===
-    // Header at row 6: Col9=Rank, Col10=Model, Col11=StartDate, Col12=AccountType, 
-    // Col13=RunningSales, Col14=Projections, Col15=MoM%, Col16=SaleCount, Col17=Follows, Col18=Visits
+    // Model columns: 9=Rank,10=Model,11=StartDate,12=AccountType,13=RunningSales,
+    // 14=Projection,15=MoM%,16=SaleCount,17=Follows,18=Visits. Data starts at hdrIdx+1.
     CR.length=0;
-    for(let i=7;i<rows.length;i++){
+    for(let i=hdrIdx+1;i<rows.length;i++){
       const r=rows[i];if(!r)continue;
       const model=(r[10]||'').toString().trim();
       if(!model||model.length<2)continue;
       if(model.toLowerCase().includes('top 20'))continue;
-      
-      const rank=parseInt(r[9])||i-6;
       const sales=parseNum((r[13]||'').toString());
       const proj=parseNum((r[14]||'').toString());
-      const mom=parseNum((r[15]||'').toString());
-      const count=parseInt(r[16])||0;
-      const follows=parseInt(r[17])||0;
-      const visits=parseInt(r[18])||0;
+      const mom=parseNum((r[15]||'').toString())/100; // sheet stores e.g. 56.21(%) -> 0.5621
+      const rank=parseInt(r[9])||(i-hdrIdx);
+      const count=parseInt((r[16]||'').toString().replace(/[^0-9-]/g,''))||0;
+      const follows=parseInt((r[17]||'').toString().replace(/[^0-9-]/g,''))||0;
+      const visits=parseInt((r[18]||'').toString().replace(/[^0-9-]/g,''))||0;
       const accType=(r[12]||'').toString().trim();
       const startDate=(r[11]||'').toString().trim();
-
       CR.push({
         id:model.toLowerCase().replace(/\s+/g,''),
         n:model,t:'',g:0,
         rank,sales,proj,mom,count,follows,visits,accType,startDate,daily:[]
       });
     }
-    
+
     await syncReferenceData();
     rebuildTeamGoals();
-    
-    console.log('[Slushy] Loaded '+CR.length+' models. First: '+(CR[0]?CR[0].n+' $'+CR[0].sales:'none'));
+    console.log('[Slushy] Creators from "'+label+'": '+CR.length+' models. Top: '+(CR[0]?CR[0].n+' $'+CR[0].sales:'none'));
     return true;
   }catch(e){console.log('[Slushy] syncSalesData error:',e.message);return false}
 }
@@ -1215,8 +1248,11 @@ async function syncPrevMonth(){
   }catch(e){console.log('Prev month sync error:',e.message)}
 }
 
-/* ── Sync chatter data from old sheet ── */
-var LIFE_DATA={}; // {chatterName: {sales: total, count: total, months: Set}}
+/* ── Sales Record = raw transaction log (current month). It is INCOMPLETE (~60% captured),
+   so we use it only for (a) per-sale avg ticket estimate and (b) discrepancy detection vs
+   the authoritative Payroll totals. ── */
+var LIFE_DATA={}; // {chatterName: {sales, count, months}}
+var DISCREPANCIES=[]; // [{name, payroll, record, gap, pct}]
 
 async function syncSalesRecord(){
   try{
@@ -1229,15 +1265,16 @@ async function syncSalesRecord(){
     // Find header
     let hdr=-1;
     for(let i=0;i<Math.min(rows.length,5);i++){
-      if(rows[i].some(c=>c==='Chatter Name'||c==='Net Sales')){hdr=i;break}
+      if((rows[i]||[]).some(c=>(c||'').includes('Chatter Name'))){hdr=i;break}
     }
     if(hdr<0)return false;
-    
+
     const h=rows[hdr];
-    const iName=h.findIndex(c=>c==='Chatter Name');
-    const iNet=h.findIndex(c=>c==='Net Sales');
-    const iMonth=h.findIndex(c=>c.includes('Month Value'));
-    
+    // Headers are verbose (e.g. "Net Sales DO NOT TOUCH") — match by substring
+    const iName=h.findIndex(c=>(c||'').includes('Chatter Name'));
+    const iNet=h.findIndex(c=>(c||'').includes('Net Sales'));
+    const iMonth=h.findIndex(c=>(c||'').includes('Month Value'));
+
     if(iName<0||iNet<0)return false;
     
     LIFE_DATA={};
@@ -1254,128 +1291,188 @@ async function syncSalesRecord(){
       if(month)LIFE_DATA[name].months[month]=true;
     }
     
-    // Apply to chatters
+    // Apply transaction-level data (avg ticket) + compute discrepancy vs Payroll total
+    DISCREPANCIES=[];
     D.forEach(c=>{
       const ld=LIFE_DATA[c.n];
-      if(ld){
-        c.lifeSales=ld.sales;
-        c.lifeCount=ld.count;
-        c.monthsActive=Object.keys(ld.months).length||1;
-      }else{
-        c.lifeSales=c.tot;
-        c.lifeCount=c.sales;
-        c.monthsActive=1;
+      c.txSales=ld?ld.sales:0;
+      c.txCount=ld?ld.count:0;
+      const rec=ld?ld.sales:0;
+      const gap=c.tot-rec; // Payroll minus what the transaction log captured
+      const pct=c.tot>0?(rec/c.tot*100):100;
+      // Flag meaningful mismatches on chatters who actually have payroll sales
+      if(c.tot>50&&(pct<90||gap>50)){
+        DISCREPANCIES.push({name:c.n,id:c.id,team:c.team,payroll:c.tot,record:rec,gap,pct});
       }
     });
-    
+    DISCREPANCIES.sort((a,b)=>b.gap-a.gap);
     enrich();
-    console.log('[Slushy] Sales Record: '+Object.keys(LIFE_DATA).length+' chatters with lifetime data');
+    console.log('[Slushy] Sales Record: '+Object.keys(LIFE_DATA).length+' chatters; '+DISCREPANCIES.length+' discrepancies flagged');
     return true;
   }catch(e){console.log('Sales Record sync error:',e.message);return false}
 }
 
-/* ── Sync chatter current month from old sheet ── */
+/* ── Build a name->{shift,team} map from the live Slushy Dashboard chatter list ── */
+var CHATTER_SHIFTS={};
+async function loadChatterShifts(){
+  try{
+    const resp=await fetch(SALES_SHEET_BASE+encodeURIComponent('Slushy Dashboard'));
+    if(!resp.ok)return;
+    const rows=parseCSV(await resp.text());
+    CHATTER_SHIFTS={};
+    for(const r of rows){
+      const nm=(r[19]||'').toString().trim();
+      const sh=(r[20]||'').toString().trim();
+      if(nm&&nm.length>2&&sh&&!/team/i.test(nm))CHATTER_SHIFTS[nm]={shift:sh,team:(r[21]||'').toString().trim()};
+    }
+  }catch(e){}
+}
+
+function goalForShift(sh){
+  if(/2x/i.test(sh))return 2000;
+  if(/4x/i.test(sh))return 7000;
+  return 4500; // standard Morning/Day/Night target
+}
+
+/* ── Chatters = authoritative June data from the Payroll tab (complete & self-consistent).
+   Totals + day-by-day from Payroll; shift from the live ops dashboard; momentum from a
+   first-half vs second-half split of the days ELAPSED so far (meaningful mid-month). ── */
 async function syncChatterData(){
   try{
-    const url=CHATTER_SHEET_BASE+encodeURIComponent('Chatter Net Sales (Payroll)');
-    const resp=await fetch(url);
+    await loadChatterShifts();
+    const resp=await fetch(CHATTER_SHEET_BASE+encodeURIComponent('Chatter Net Sales (Payroll)'));
     if(!resp.ok)throw new Error('HTTP '+resp.status);
-    const csv=await resp.text();
-    const rows=parseCSV(csv);
-    
-    // Header at row 3: Col6=ChatterName, Col7=Status, Col8=Team, Col9=1to14, Col13=TotalMonth
-    let hdr=-1;
+    const rows=parseCSV(await resp.text());
+
+    // Locate the right-hand chatter table: a row containing 'Chatter Name'
+    let hdr=-1,iName=-1;
     for(let i=0;i<Math.min(rows.length,10);i++){
-      if(rows[i]&&rows[i].some(c=>(c||'').toString().includes('Chatter Name'))){hdr=i;break}
+      const idx=(rows[i]||[]).findIndex(c=>(c||'').toString().trim()==='Chatter Name');
+      if(idx>=0){hdr=i;iName=idx;break}
     }
     if(hdr<0){console.log('[Slushy] Chatter header not found');return false}
-    
     const h=rows[hdr];
-    const col=(name)=>h.findIndex(c=>c&&c.toString().includes(name));
-    const iName=col('Chatter Name'),iStatus=col('Status'),iTeam=col('Team');
-    const i14=col('1 to 14'),i15=col('15 to End'),iTot=col('Total Month');
-    const iGoal=col('Goal')>=0?col('Goal'):col('Target');
-    console.log('[Slushy] Chatter cols: Name='+iName+' Team='+iTeam+' Tot='+iTot+' 14='+i14);
-    
-    if(iName<0||iTot<0){console.log('[Slushy] Missing chatter columns');return false}
-    
-    const oldMap={};D.forEach(c=>{oldMap[c.n]=c});
+    const iStatus=iName+1,iTeam=iName+2,iTot=iName+3;
+
+    // Daily date columns: first col after total whose header looks like "June 1, 2026"
+    const dateRe=/^([A-Za-z]+)\s+(\d+),\s*(\d{4})$/;
+    const monthName=MONTHS[currentMonth];
+    const dayCols=[]; // {col, day}
+    for(let j=iTot+1;j<h.length;j++){
+      const m=(h[j]||'').toString().trim().match(dateRe);
+      if(m&&m[1]===monthName)dayCols.push({col:j,day:parseInt(m[2])});
+    }
+    const todayDay=new Date().getDate();
+
     const freshD=[];let id=1;
-    
     for(let i=hdr+1;i<rows.length;i++){
       const r=rows[i];if(!r)continue;
       const name=(r[iName]||'').toString().trim();
       if(!name||name.length<2)continue;
       const tot=parseNum((r[iTot]||'').toString());
-      const old=oldMap[name]||{};
+      // Daily array indexed by day-1 (only this month's days)
+      const daily=[];
+      const elapsed=[]; // values for days 1..today, in order, for momentum
+      for(const dc of dayCols){
+        const v=parseNum((r[dc.col]||'').toString());
+        daily[dc.day-1]=v;
+        if(dc.day<=todayDay)elapsed.push(v);
+      }
+      // Momentum: 2nd half vs 1st half of elapsed days (mid-month aware)
+      const mid=Math.ceil(elapsed.length/2);
+      const f14=elapsed.slice(0,mid).reduce((s,v)=>s+v,0);
+      const l15=elapsed.slice(mid).reduce((s,v)=>s+v,0);
+      const sd=CHATTER_SHIFTS[name]||{};
+      const shift=sd.shift||'';
       freshD.push({
         id:id++,n:name,
-        st:iStatus>=0?(r[iStatus]||'').toString().trim()||(old.st||'Active'):(old.st||'Active'),
-        team:iTeam>=0?(r[iTeam]||'').toString().trim()||(old.team||''):(old.team||''),
-        shift:old.shift||'',
-        goal:iGoal>=0?parseNum((r[iGoal]||'').toString()):(old.goal||0),
-        f14:i14>=0?parseNum((r[i14]||'').toString()):(old.f14||0),
-        l15:i15>=0?parseNum((r[i15]||'').toString()):(old.l15||0),
-        tot:tot,sales:0,daily:old.daily||[]
+        st:(r[iStatus]||'').toString().trim()||'Active',
+        team:(r[iTeam]||'').toString().trim()||sd.team||'',
+        shift,
+        goal:goalForShift(shift),
+        f14,l15,tot,sales:0,
+        txSales:0,txCount:0,
+        daily
       });
     }
-    
+
     if(freshD.length>=3){
       D.length=0;freshD.forEach(c=>D.push(c));enrich();
-      console.log('[Slushy] Chatter sync: '+D.length+' chatters. First: '+(D[0]?D[0].n+' $'+D[0].tot:'none'));
+      console.log('[Slushy] Chatters from Payroll: '+D.length+'. Top: '+(D.slice().sort((a,b)=>b.tot-a.tot)[0]||{}).n);
       return true;
     }
     return false;
   }catch(e){console.log('[Slushy] Chatter sync error:',e.message);return false}
 }
 
-/* ── Sync from Slushy Dashboard tab (main ops dashboard) ── */
+/* ── June summary KPIs + daily totals from the live "Slushy Dashboard" ops tab.
+   Layout is heavily merged, so we anchor on label cells and grab the adjacent value. ── */
 async function syncMainDashboard(){
   try{
-    const url=SALES_SHEET_BASE+encodeURIComponent('Slushy Dashboard');
-    const resp=await fetch(url);
+    const resp=await fetch(SALES_SHEET_BASE+encodeURIComponent('Slushy Dashboard'));
     if(!resp.ok)return false;
-    const csv=await resp.text();
-    const rows=parseCSV(csv);
-    
-    // This tab has pre-computed values in a specific layout
-    for(let i=0;i<rows.length;i++){
-      const r=rows[i];
-      for(let j=0;j<r.length;j++){
-        const v=(r[j]||'').toString().trim().toLowerCase();
-        // Look for key values
-        if(v==='monthly goal'&&ME.mg===0){for(let k=j+1;k<Math.min(r.length,j+5);k++){const n=parseNum(r[k]);if(n>1000){ME.mg=n;break}}}
-        if(v==='daily goal'&&ME.dg===0){for(let k=j+1;k<Math.min(r.length,j+5);k++){const n=parseNum(r[k]);if(n>0){ME.dg=n;break}}}
-        if(v==='daily proj'&&ME.dp===0){for(let k=j+1;k<Math.min(r.length,j+5);k++){const n=parseNum(r[k]);if(n>0){ME.dp=n;break}}}
-        if(v==='monthly proj'&&ME.mp===0){for(let k=j+1;k<Math.min(r.length,j+5);k++){const n=parseNum(r[k]);if(n>1000){ME.mp=n;break}}}
-        if(v.includes('total sale count')&&ME.sc===0){for(let k=j+1;k<Math.min(r.length,j+5);k++){const n=parseNum(r[k]);if(n>0){ME.sc=n;break}}}
-        if(v.includes('april running sale')||v.includes('march running sale')){for(let k=j+1;k<Math.min(r.length,j+5);k++){const n=parseNum(r[k]);if(n>1000&&ME.mr===0){ME.mr=n;break}}}
+    const rows=parseCSV(await resp.text());
+    const at=(i,j)=>(i>=0&&i<rows.length&&rows[i]&&j>=0&&j<rows[i].length)?(rows[i][j]||'').toString():'';
+    // Find a label cell (exact or startsWith) and return a numeric neighbour in the given direction
+    function valNear(test,dir){
+      for(let i=0;i<rows.length;i++)for(let j=0;j<(rows[i]||[]).length;j++){
+        const cell=at(i,j).trim().toLowerCase();
+        if(cell&&test(cell)){
+          const probes=dir==='above'?[[i-1,j]]:dir==='below'?[[i+1,j]]:[[i,j+1],[i,j+2],[i+1,j]];
+          for(const [pi,pj] of probes){const n=parseNum(at(pi,pj));if(n)return n}
+        }
       }
+      return 0;
     }
-    
-    // Also look for the model breakdown section
-    // Find "Breakdown per Model" section
-    let bpmRow=-1;
+    const daysInMonth=new Date(currentYear,currentMonth+1,0).getDate();
+
+    // Monthly running for the current month: row in col 28 == "June 2026" -> col 29
+    const curLabel=MONTHS[currentMonth]+' '+currentYear;
+    for(let i=0;i<rows.length;i++){if(at(i,28).trim()===curLabel){const n=parseNum(at(i,29));if(n)ME.mr=n;break}}
+
+    ME.mg=valNear(c=>c==='monthly goal','above')||ME.mg;
+    ME.sc=valNear(c=>c.includes('total sale count'),'above')||ME.sc;
+    ME.td=valNear(c=>c.startsWith('today ('),'below')||ME.td;
+    ME.yd=valNear(c=>c.startsWith('yesterday ('),'below')||ME.yd;
+    ME.tc=valNear(c=>c.startsWith('today sale count'),'below')||ME.tc;
+    ME.yc=valNear(c=>c.startsWith('yesterday sale count'),'below')||ME.yc;
+
+    // Daily totals: col 5 = "Jun 1, 2026" date, col 6 = day's sales
+    const dRe=/^[A-Za-z]{3}\s+(\d+)/;
+    const md=[];
     for(let i=0;i<rows.length;i++){
-      if(rows[i]&&rows[i].some(c=>(c||'').toString().includes('Breakdown per Model'))){bpmRow=i;break}
+      const m=at(i,5).trim().match(dRe);
+      if(m){const day=parseInt(m[1]);md[day-1]={d:day,s:parseNum(at(i,6)),h:[]}}
     }
-    
-    console.log('[Slushy] MainDash sync: Goal=$'+ME.mg+' SC='+ME.sc+' BPM row='+bpmRow);
+    if(md.filter(Boolean).length>0){
+      MD.length=0;
+      for(let d=1;d<=daysInMonth;d++)MD.push(md[d-1]||{d,s:0,h:[]});
+    }
+    // Fallbacks / derived
+    if(!ME.mr&&MD.length)ME.mr=MD.reduce((s,d)=>s+d.s,0);
+    const elapsed=Math.max(new Date().getDate(),1);
+    if(!ME.mp&&ME.mr)ME.mp=(ME.mr/elapsed)*daysInMonth;
+    if(!ME.dg&&ME.mg)ME.dg=ME.mg/daysInMonth;
+    if(!ME.dp)ME.dp=ME.td;
+
+    console.log('[Slushy] MainDash: Running=$'+Math.round(ME.mr)+' Goal=$'+ME.mg+' SC='+ME.sc+' Today=$'+ME.td+' Yday=$'+ME.yd);
     return true;
   }catch(e){console.log('MainDash sync error:',e.message);return false}
 }
 
 async function doSync(){
   try{
+    // Independent sources first, in parallel
     const results=await Promise.allSettled([
       syncSalesData(),
       syncMainDashboard(),
-      syncChatterData(),
-      syncPrevMonth(),
-      syncSalesRecord()
+      syncPrevMonth()
     ]);
-    
-    const anyOk=results.some(r=>r.status==='fulfilled'&&r.value===true);
+    // Chatters MUST finish before Sales Record (which patches avg ticket + discrepancies onto D)
+    const chOk=await syncChatterData().catch(()=>false);
+    const srOk=await syncSalesRecord().catch(()=>false);
+
+    const anyOk=results.some(r=>r.status==='fulfilled'&&r.value===true)||chOk||srOk;
     lastSync=new Date();
     syncStatus=anyOk?'live':'partial';
     
