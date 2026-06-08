@@ -245,9 +245,9 @@ function enrich(){
   const daysInMonth=new Date(currentYear,currentMonth+1,0).getDate();
   const monthPct=Math.max(dayOfMonth/daysInMonth,0.03);
   D.forEach(c=>{
-    // Sale count + avg ticket come from transaction data (partial until Sales Record is fixed)
-    c.sales=c.txCount||0;
-    c.avgTicket=c.txCount>0?c.txSales/c.txCount:0;
+    // Sale count + avg ticket: prefer Monthly Ranking (complete), fall back to transaction log
+    c.sales=c.mrCount>0?c.mrCount:(c.txCount||0);
+    c.avgTicket=c.mrAvgTicket>0?c.mrAvgTicket:(c.txCount>0?c.txSales/c.txCount:0);
     c.dailyAvg=dayOfMonth>0?c.tot/dayOfMonth:0;
     // Projected month-end total at current pace
     c.projMonth=c.dailyAvg*daysInMonth;
@@ -255,35 +255,43 @@ function enrich(){
     c.momentum=c.f14>0?c.l15/c.f14:(c.l15>0?2:1);
     c.pctGoal=c.goal>0?(c.tot/(c.goal*monthPct)*100):0;
     c.projVsGoal=c.goal>0?(c.projMonth/c.goal*100):0;
+    // Combined-months: avg monthly revenue across tenure (floor denominator at 2 mo so new
+    // chatters with a few weeks of data don't get an inflated monthly average)
+    c.lifeMonthlyAvg=c.lifeSales>0?c.lifeSales/Math.max(c.tenureMonths||2,2):c.tot;
   })
 }
 enrich();
 
 function getTier(c){
+  if(c.st==="ZTP")return"critical";   // offboarded (excluded from active analytics)
   if(c.st==="PTO")return"watch";
   const active=D.filter(x=>x.st==="Active");
-  const mxTot=Math.max(...active.map(x=>x.tot),1);
-  const days=Math.max(new Date().getDate(),1);
-  const activeDays=(c.daily||[]).slice(0,days).filter(v=>v>0).length;
-  // Reliable current-month score: revenue vs top (45), pace to goal (30), trend (15), consistency (10)
-  const s1=Math.min((c.tot/mxTot)*45,45);
-  const s2=Math.min((c.pctGoal/100)*30,30);
-  const s3=Math.min((Math.min(c.momentum,2)/2)*15,15);
-  const s4=Math.min((activeDays/days)*10,10);
+  const mxLMA=Math.max(...active.map(x=>x.lifeMonthlyAvg||x.tot),1);
+  // Combined-months score: lifetime avg monthly revenue (40), current pace (25), avg ticket (20), trend (15)
+  const s1=Math.min((c.lifeMonthlyAvg/mxLMA)*40,40);
+  const s2=Math.min((c.pctGoal/100)*25,25);
+  const s3=Math.min((c.avgTicket/40)*20,20);
+  const s4=Math.min((Math.min(c.momentum,2)/2)*15,15);
   const s=s1+s2+s3+s4;
+  // New chatters lack history — never auto-rate them below 'watch'
+  if(c.isNew)return s>=62?"star":s>=42?"solid":"watch";
   return s>=62?"star":s>=42?"solid":s>=25?"watch":"critical"
 }
 function getAct(c){
+  if(c.st==="ZTP")return{l:"Offboarded",cl:"var(--d)",u:11,d:"ZTP — no longer active. Excluded from analytics.",y:"info"};
+  if(c.st==="PTO")return{l:"PTO",cl:"var(--d)",u:10,d:"Inactive (PTO).",y:"info"};
+  if(c.isNew)return{l:"New / Settling",cl:"var(--bl)",u:7,d:"Started "+(c.startDate||'recently')+" (~"+(c.tenureMonths?c.tenureMonths.toFixed(1):'<1')+" mo) — or recent shift change. Too little history to judge fairly; coach and give time.",y:"new"};
   const t=getTier(c);
-  if(c.st==="PTO")return{l:"PTO",cl:"var(--d)",u:10,d:"Inactive",y:"info"};
   const pace=c.pctGoal||0,mom=c.momentum||1,momPct=((mom-1)*100).toFixed(0);
-  if(t==="critical"&&pace<40&&mom<0.85)return{l:"Replace",cl:"var(--rd)",u:0,d:"At "+pace.toFixed(0)+"% of pace and trending down ("+momPct+"%). Strong replace candidate.",y:"terminate"};
-  if(t==="critical")return{l:"Final Warning",cl:"var(--or)",u:1,d:"Bottom tier — only "+pace.toFixed(0)+"% of pace ("+fmt(c.tot)+"). Must improve this cycle.",y:"warning"};
-  if(t==="watch"&&mom<0.85)return{l:"Coach",cl:"var(--am)",u:3,d:"Declining trend ("+momPct+"%). Needs coaching this week.",y:"coach"};
-  if(t==="watch")return{l:"Monitor",cl:"var(--am)",u:3,d:"At "+pace.toFixed(0)+"% of pace. Weekly check-ins.",y:"monitor"};
+  const lma=c.lifeMonthlyAvg||c.tot;const ten=c.tenureMonths;
+  const established=(ten==null||ten>=2);
+  if(t==="critical"&&pace<40&&mom<0.85&&established)return{l:"Replace",cl:"var(--rd)",u:0,d:"Lifetime avg "+fmt(lma)+"/mo over ~"+(ten?ten.toFixed(1):'?')+" mo, "+pace.toFixed(0)+"% pace and declining. Replace candidate.",y:"terminate"};
+  if(t==="critical")return{l:"Final Warning",cl:"var(--or)",u:1,d:"Bottom tier — lifetime "+fmt(lma)+"/mo, "+pace.toFixed(0)+"% of pace. Must improve this cycle.",y:"warning"};
+  if(t==="watch"&&mom<0.85)return{l:"Coach",cl:"var(--am)",u:3,d:"Declining trend ("+momPct+"%), "+fmt(c.avgTicket)+" avg ticket. Coach this week.",y:"coach"};
+  if(t==="watch")return{l:"Monitor",cl:"var(--am)",u:3,d:"Lifetime "+fmt(lma)+"/mo at "+pace.toFixed(0)+"% pace. Weekly check-ins.",y:"monitor"};
   if(t==="solid"&&pace>120&&mom>=1)return{l:"Promote",cl:"var(--tl)",u:5,d:"Exceeding pace ("+pace.toFixed(0)+"%) and rising. Ready for a higher-value page.",y:"promote"};
-  if(t==="star")return{l:"★ Star",cl:"var(--gn)",u:6,d:fmt(c.tot)+" this month at "+pace.toFixed(0)+"% pace. Protect & keep on a top page.",y:"star"};
-  return{l:"Maintain",cl:"var(--d)",u:4,d:"On track at "+pace.toFixed(0)+"% of pace.",y:"maintain"}
+  if(t==="star")return{l:"★ Star",cl:"var(--gn)",u:6,d:"Lifetime "+fmt(lma)+"/mo, "+fmt(c.avgTicket)+" ticket. Protect & keep on a top page.",y:"star"};
+  return{l:"Maintain",cl:"var(--d)",u:4,d:"On track — lifetime "+fmt(lma)+"/mo at "+pace.toFixed(0)+"% pace.",y:"maintain"}
 }
 function fmt(n){return"$"+n.toLocaleString("en-US",{minimumFractionDigits:2,maximumFractionDigits:2})}
 function fK(n){return n>=1000?"$"+(n/1000).toFixed(1)+"k":fmt(n)}
@@ -1378,13 +1386,62 @@ function goalForShift(sh){
   if(/4x/i.test(sh))return 7000;
   return 4500; // standard Morning/Day/Night target
 }
+function normName(s){return (s||'').toString().trim().toLowerCase().replace(/\s+/g,' ')}
+function monthsSince(dateStr){
+  if(!dateStr)return null;
+  const d=new Date(dateStr);if(isNaN(d))return null;
+  return Math.max((new Date()-d)/(1000*60*60*24*30.44),0.1);
+}
+
+/* ── HR data from the Reference tab employee section (cols 12-18):
+   Name, Status (Active/ZTP=offboarded), Team, Stellar Goal, Start Date, End Date, Shift. ── */
+var EMP_HR={};
+async function loadReferenceHR(){
+  try{
+    const resp=await fetch('/api/sheet?sid=slushy&sheet='+encodeURIComponent('Reference'));
+    if(!resp.ok)return;
+    const rows=parseCSV(await resp.text());
+    let hdr=-1,iN=-1;
+    for(let i=0;i<Math.min(rows.length,5);i++){
+      const idx=(rows[i]||[]).findIndex(c=>(c||'').toString().trim()==='Employee Name');
+      if(idx>=0){hdr=i;iN=idx;break}
+    }
+    if(hdr<0)return;
+    EMP_HR={};
+    for(let i=hdr+1;i<rows.length;i++){
+      const r=rows[i];const nm=(r[iN]||'').toString().trim();
+      if(!nm||nm.length<2)continue;
+      EMP_HR[normName(nm)]={status:(r[iN+1]||'').toString().trim(),startDate:(r[iN+4]||'').toString().trim(),endDate:(r[iN+5]||'').toString().trim(),shift:(r[iN+6]||'').toString().trim()};
+    }
+  }catch(e){console.log('Reference HR error:',e.message)}
+}
+
+/* ── Lifetime + true count/avg/hours from the Monthly Ranking chatter table.
+   col24=Name,26=sales,28=hours,29=count,30=avgTicket,35=lifetime(all months combined). ── */
+var MR_DATA={};
+async function loadMonthlyRanking(){
+  try{
+    const resp=await fetch('/api/sheet?sid=slushy&sheet='+encodeURIComponent('Monthly Ranking'));
+    if(!resp.ok)return;
+    const rows=parseCSV(await resp.text());
+    let start=-1;
+    for(let i=0;i<rows.length;i++){if((rows[i]||[])[24]&&rows[i][24].toString().trim()==='Chatter'){start=i+1;break}}
+    if(start<0)return;
+    MR_DATA={};
+    for(let i=start;i<rows.length;i++){
+      const r=rows[i];const nm=(r[24]||'').toString().trim();
+      if(!nm||nm.length<2||!(r[26]||'').toString().includes('$'))continue;
+      MR_DATA[normName(nm)]={count:parseInt((r[29]||'').toString().replace(/[^0-9]/g,''))||0,avgTicket:parseNum(r[30]),hours:(r[28]||'').toString().trim(),lifeSales:parseNum(r[35])};
+    }
+  }catch(e){console.log('Monthly Ranking error:',e.message)}
+}
 
 /* ── Chatters = authoritative June data from the Payroll tab (complete & self-consistent).
    Totals + day-by-day from Payroll; shift from the live ops dashboard; momentum from a
    first-half vs second-half split of the days ELAPSED so far (meaningful mid-month). ── */
 async function syncChatterData(){
   try{
-    await loadChatterShifts();
+    await Promise.all([loadChatterShifts(),loadReferenceHR(),loadMonthlyRanking()]);
     const resp=await fetch(CHATTER_SHEET_BASE+encodeURIComponent('Chatter Net Sales (Payroll)'));
     if(!resp.ok)throw new Error('HTTP '+resp.status);
     const rows=parseCSV(await resp.text());
@@ -1428,14 +1485,28 @@ async function syncChatterData(){
       const f14=elapsed.slice(0,mid).reduce((s,v)=>s+v,0);
       const l15=elapsed.slice(mid).reduce((s,v)=>s+v,0);
       const sd=CHATTER_SHIFTS[name]||{};
-      const shift=sd.shift||'';
+      const hr=EMP_HR[normName(name)]||{};
+      const mr=MR_DATA[normName(name)]||{};
+      const shift=sd.shift||hr.shift||'';
+      // Status: ZTP (offboarded/fired) from HR takes priority over the payroll status
+      const payStatus=(r[iStatus]||'').toString().trim();
+      let st=hr.status||payStatus||'Active';
+      if(/ztp/i.test(hr.status)||/ztp/i.test(payStatus))st='ZTP';
+      const tenure=monthsSince(hr.startDate);
       freshD.push({
         id:id++,n:name,
-        st:(r[iStatus]||'').toString().trim()||'Active',
+        st,
         team:(r[iTeam]||'').toString().trim()||sd.team||'',
         shift,
         goal:goalForShift(shift),
         f14,l15,tot,sales:0,
+        mrCount:mr.count||0,          // real sale count from Monthly Ranking
+        mrAvgTicket:mr.avgTicket||0,  // internally-consistent avg ticket
+        hours:mr.hours||'',
+        lifeSales:mr.lifeSales||0,    // all-months-combined sales
+        startDate:hr.startDate||'',
+        tenureMonths:tenure,          // null if unknown
+        isNew:tenure!=null&&tenure<2, // new/settling: <2 months OR recent shift change — protect from harsh flags
         txSales:0,txCount:0,
         daily
       });
