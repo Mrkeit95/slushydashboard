@@ -296,15 +296,35 @@ function fI(n){return"$"+Math.round(n).toLocaleString()}
 function tb(t){return`<span class="badge b-${t}">${t.toUpperCase()}</span>`}
 function ab(a){return`<span class="ab" style="background:${a.cl}15;color:${a.cl}">${a.l}</span>`}
 
-/* ─── Storage ─── */
+/* ─── Storage ───
+   localStorage is the fast local cache; the server (/api/store) is the shared source of
+   truth so tasks/notes persist forever and sync across the whole team. Writes are
+   write-through (local immediately + pushed to server); pullStore() refreshes from server. */
+const STORE_BASE='/api/store?key=';
+var STORE_OK=null; // null=unknown, true=server active, false=local-only
+async function pullStore(){
+  try{
+    const [t,s]=await Promise.all([
+      fetch(STORE_BASE+'tasks').then(r=>r.json()).catch(()=>({ok:false})),
+      fetch(STORE_BASE+'store').then(r=>r.json()).catch(()=>({ok:false}))
+    ]);
+    STORE_OK=(t&&t.ok!==false);
+    if(t&&t.ok&&t.value!=null)localStorage.setItem('st7',JSON.stringify(t.value));
+    if(s&&s.ok&&s.value!=null)localStorage.setItem('sv7',JSON.stringify(s.value));
+  }catch(e){STORE_OK=false}
+}
+function pushStore(key,val){
+  if(STORE_OK===false)return; // no server configured — stay local-only
+  try{fetch(STORE_BASE+key,{method:'POST',headers:{'Content-Type':'text/plain'},body:JSON.stringify(val)})}catch(e){}
+}
 function gS(){try{return JSON.parse(localStorage.getItem('sv7')||'{}')}catch(e){return{}}}
-function sS(d){localStorage.setItem('sv7',JSON.stringify(d))}
+function sS(d){try{localStorage.setItem('sv7',JSON.stringify(d))}catch(e){}pushStore('store',d)}
 function gCS(id){return gS()[id]||{notes:[],actions:[],status:null}}
 function saveNote(id,text){const s=gS();if(!s[id])s[id]={notes:[],actions:[],status:null};s[id].notes.unshift({text,time:new Date().toLocaleString(),by:U.n,id:Date.now()});sS(s);toast("Note saved");openCh(id)}
 function delNote(cid,nid){if(!isA()){toast("Admin only");return}const s=gS();if(s[cid])s[cid].notes=s[cid].notes.filter(n=>n.id!==nid);sS(s);openCh(cid)}
 function saveActn(id,a,d){const s=gS();if(!s[id])s[id]={notes:[],actions:[],status:null};s[id].actions.unshift({a,d,time:new Date().toLocaleString(),by:U.n});s[id].status=a;sS(s);toast(a);openCh(id);render()}
 function gT(){try{return JSON.parse(localStorage.getItem('st7')||'[]')}catch(e){return[]}}
-function sT(t){try{localStorage.setItem('st7',JSON.stringify(t))}catch(e){toast('⚠ Could not save task (storage blocked)')}}
+function sT(t){try{localStorage.setItem('st7',JSON.stringify(t))}catch(e){}pushStore('tasks',t)}
 function addTask(text,pri,cid){const t=gT();t.unshift({id:Date.now(),text,pri,cid:cid||0,done:false,created:new Date().toLocaleString(),by:U.n,updates:[]});sT(t);render()}
 function togTask(id){const t=gT();const tk=t.find(x=>x.id===id);if(tk)tk.done=!tk.done;sT(t);render()}
 function delTask(id){if(!isA()){toast("Admin only");return}sT(gT().filter(x=>x.id!==id));render()}
@@ -1584,6 +1604,7 @@ async function doSync(){
     // Chatters MUST finish before Sales Record (which patches avg ticket + discrepancies onto D)
     const chOk=await syncChatterData().catch(()=>false);
     const srOk=await syncSalesRecord().catch(()=>false);
+    await pullStore().catch(()=>{}); // refresh shared tasks/notes from server
 
     const anyOk=results.some(r=>r.status==='fulfilled'&&r.value===true)||chOk||srOk;
     lastSync=new Date();
@@ -1612,12 +1633,15 @@ try{
   document.getElementById('t-overview').innerHTML='<div style="padding:20px;color:var(--t)">Loading dashboard... syncing with Google Sheets...</div>';
   document.getElementById('tbar').innerHTML=TABS.map(t=>`<button class="tb${tab===t.id?' on':''}" onclick="switchTab('${t.id}')">${t.l}</button>`).join('');
 }catch(e){errs.push('Tab init: '+e.message)}
-try{render()}catch(e){
-  errs.push('Render: '+e.message+'\n'+e.stack);
-  document.getElementById('t-overview').innerHTML='<div style="padding:40px"><h2 style="color:#FF3B5C;margin-bottom:12px">Dashboard Error</h2><pre style="color:#8899AA;white-space:pre-wrap;font-size:13px;line-height:1.6;background:rgba(255,255,255,0.03);padding:20px;border-radius:12px">'+errs.join('\n\n')+'</pre></div>';
-}
-doSync();
-setInterval(doSync, 60000);
+// Pull shared tasks/notes from the server BEFORE first render so the team's list shows
+pullStore().finally(()=>{
+  try{render()}catch(e){
+    errs.push('Render: '+e.message+'\n'+e.stack);
+    document.getElementById('t-overview').innerHTML='<div style="padding:40px"><h2 style="color:#FF3B5C;margin-bottom:12px">Dashboard Error</h2><pre style="color:#8899AA;white-space:pre-wrap;font-size:13px;line-height:1.6;background:rgba(255,255,255,0.03);padding:20px;border-radius:12px">'+errs.join('\n\n')+'</pre></div>';
+  }
+  doSync();
+  setInterval(doSync, 60000);
+});
 }
 
 /* ─── AUTO-LOGIN (must be after all declarations) ─── */
