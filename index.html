@@ -107,14 +107,15 @@ try{['slushy_actions','slushy_v4','slushy_v5','sv7','st7','su7'].forEach(k=>{
   if(v&&k!=='slushy_users'&&k!=='sv7'&&k!=='st7'&&k!=='su7')localStorage.removeItem(k);
 })}catch(e){}
 /* ═══ AUTH + USER DB ═══ */
-const DEFAULT_USERS={"keit":{n:"Keit",p:"slushy2026",r:"admin"},"zein":{n:"Zein",p:"slushy2026",r:"admin"},"alex":{n:"Alex",p:"slushy2026",r:"admin"},"cory":{n:"Cory",p:"slushy2026",r:"admin"},"angelica":{n:"Angelica",p:"slushy2026",r:"admin"},"jovs":{n:"Jovs",p:"slushy2026",r:"admin"},"emman":{n:"Emman",p:"slushy2026",r:"admin"},"maria":{n:"Maria",p:"manager123",r:"manager"},"juan":{n:"Juan",p:"manager123",r:"manager"},"carlos":{n:"Carlos",p:"manager123",r:"manager"},"diana":{n:"Diana",p:"manager123",r:"manager"},"paolo":{n:"Paolo",p:"manager123",r:"manager"}};
+const DEFAULT_USERS={"keit":{n:"Keit",p:"slushy2026",r:"admin"},"zein":{n:"Zein",p:"slushy2026",r:"admin"},"alex":{n:"Alex",p:"slushy2026",r:"admin"},"cory":{n:"Cory",p:"slushy2026",r:"admin"},"angelica":{n:"Angelica",p:"slushy2026",r:"admin"},"jovs":{n:"Jovs",p:"slushy2026",r:"admin"},"emman":{n:"Emman",p:"slushy2026",r:"admin"},"raffy":{n:"Raffy",p:"slushy2026",r:"admin"},"maria":{n:"Maria",p:"manager123",r:"manager"},"juan":{n:"Juan",p:"manager123",r:"manager"},"carlos":{n:"Carlos",p:"manager123",r:"manager"},"diana":{n:"Diana",p:"manager123",r:"manager"},"paolo":{n:"Paolo",p:"manager123",r:"manager"}};
 function getUserDB(){
   let d={};
   try{d=JSON.parse(localStorage.getItem('slushy_users'))||{}}catch(e){d={}}
   if(!d||Object.keys(d).length===0)d={...DEFAULT_USERS};
-  // Always guarantee the primary admin logins work (no 2FA lockout): keit / cory — slushy2026
+  // Always guarantee these logins work everywhere (no 2FA lockout) — slushy2026
   d.keit={n:"Keit",p:"slushy2026",r:"admin"};
   d.cory={n:"Cory",p:"slushy2026",r:"admin"};
+  d.raffy={n:"Raffy",p:"slushy2026",r:"admin"};
   localStorage.setItem('slushy_users',JSON.stringify(d));
   return d;
 }
