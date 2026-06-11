@@ -260,42 +260,49 @@ function enrich(){
 }
 enrich();
 
-/* Tier by the agency's real performance levers: avg ticket (upselling skill) + pace to goal.
-   New/settling hires are never rated below 'watch'; ZTP is offboarded. */
+/* Grade chatters on REVENUE PACE (the agency's bar: ~$1.5k in 11 days = a star), i.e.
+   $/day so far this month. Avg ticket is used to flag coaching, not to set the grade.
+   New hires (<=1mo) are never rated below 'watch'; ZTP is offboarded. */
+var STAR_RATE=1500/11;            // ~$136/day → "$1.5k by day 11" pace
+var SOLID_RATE=900/11;            // ~$82/day
+var WATCH_RATE=450/11;            // ~$41/day
+function dayPace(c){return (c.tot||0)/Math.max(new Date().getDate(),1)}
 function getTier(c){
   if(c.st==="ZTP")return"critical";   // offboarded (excluded from active analytics)
   if(c.st==="PTO")return"watch";
-  const tk=c.avgTicket||0,pace=c.projVsGoal||0;
-  if(c.isNew){ if(tk>=28&&pace>=110)return"star"; if(tk>=22&&pace>=90)return"solid"; return"watch"; }
-  if((tk<18&&pace<85)||pace<55)return"critical";   // low skill + behind, or badly behind
-  if(tk>=28&&pace>=110)return"star";
-  if(tk>=22&&pace>=90)return"solid";
-  return"watch";
+  const pace=dayPace(c);
+  if(c.isNew)return pace>=STAR_RATE?"star":pace>=WATCH_RATE?"solid":"watch"; // new never critical
+  if(pace>=STAR_RATE)return"star";
+  if(pace>=SOLID_RATE)return"solid";
+  if(pace>=WATCH_RATE)return"watch";
+  return"critical";
 }
 function getAct(c){
   if(c.st==="ZTP")return{l:"Offboarded",cl:"var(--d)",u:11,d:"ZTP — no longer active. Excluded from analytics.",y:"info"};
   if(c.st==="PTO")return{l:"PTO",cl:"var(--d)",u:10,d:"Inactive (PTO).",y:"info"};
-  const tk=c.avgTicket||0,pace=c.projVsGoal||0,mom=c.momentum||1,momPct=((mom-1)*100).toFixed(0);
-  const ten=c.tenureMonths;
-  // New/settling — flag for attention but NEVER recommend firing (too little history)
+  const tk=c.avgTicket||0,ten=c.tenureMonths,proj=c.projMonth||c.tot;
   if(c.isNew){
     if(tk<20)return{l:"New · Coach",cl:"var(--bl)",u:6,d:"~"+(ten?ten.toFixed(1):'<1')+"mo in. Low ticket ("+fmt(tk)+") — coach upselling; too early to judge.",y:"new"};
     return{l:"New · Monitor",cl:"var(--bl)",u:7,d:"~"+(ten?ten.toFixed(1):'<1')+"mo in. Give time & monitor.",y:"new"};
   }
-  const t=getTier(c);
-  if(t==="critical"&&tk<15&&pace<70)return{l:"Replace",cl:"var(--rd)",u:0,d:"Established, very low ticket ("+fmt(tk)+") at "+pace.toFixed(0)+"% of goal. Replace candidate.",y:"terminate"};
-  if(t==="critical")return{l:"Final Warning",cl:"var(--or)",u:1,d:"Underperforming — "+fmt(tk)+" ticket, "+pace.toFixed(0)+"% of goal. Must improve this cycle.",y:"warning"};
-  if(t==="watch"&&tk<22)return{l:"Coach",cl:"var(--am)",u:3,d:"Low avg ticket ("+fmt(tk)+"). Needs upselling training.",y:"coach"};
-  if(t==="watch")return{l:"Monitor",cl:"var(--am)",u:3,d:pace.toFixed(0)+"% of goal, "+fmt(tk)+" ticket"+(mom<0.85?" · declining ("+momPct+"%)":"")+". Weekly check-ins.",y:"monitor"};
-  if(t==="solid"&&pace>120)return{l:"Promote",cl:"var(--tl)",u:5,d:"Beating goal ("+pace.toFixed(0)+"%), "+fmt(tk)+" ticket. Ready for a higher page.",y:"promote"};
-  if(t==="star")return{l:"★ Star",cl:"var(--gn)",u:6,d:fmt(tk)+" ticket at "+pace.toFixed(0)+"% of goal. Protect & keep on a top page.",y:"star"};
-  return{l:"Maintain",cl:"var(--d)",u:4,d:"On track — "+fmt(tk)+" ticket, "+pace.toFixed(0)+"% of goal.",y:"maintain"}
+  const t=getTier(c);const established=(ten==null||ten>1);
+  if(t==="critical"){
+    if(established&&tk<20)return{l:"Replace",cl:"var(--rd)",u:0,d:"Established, low output ("+fmt(c.tot)+" so far) & low ticket ("+fmt(tk)+"). Replace candidate.",y:"terminate"};
+    if(established)return{l:"Final Warning",cl:"var(--or)",u:1,d:"Low output — only "+fmt(c.tot)+" so far. Must improve this cycle.",y:"warning"};
+    return{l:"Monitor",cl:"var(--am)",u:3,d:"Low output ("+fmt(c.tot)+"). Watch closely.",y:"monitor"};
+  }
+  if(t==="star")return{l:"★ Star",cl:"var(--gn)",u:6,d:fmt(c.tot)+" in "+new Date().getDate()+" days"+(tk<22?" · coach ticket ("+fmt(tk)+")":"")+". Protect & keep on a top page.",y:"star"};
+  if(tk<20)return{l:"Coach",cl:"var(--am)",u:3,d:"Solid volume ("+fmt(c.tot)+") but low avg ticket ("+fmt(tk)+"). Coach upselling.",y:"coach"};
+  if(t==="solid")return{l:"Maintain",cl:"var(--d)",u:4,d:"On track — "+fmt(c.tot)+" so far, "+fmt(tk)+" ticket.",y:"maintain"};
+  return{l:"Monitor",cl:"var(--am)",u:3,d:fmt(c.tot)+" so far ("+fmt(tk)+" ticket). Weekly check-ins.",y:"monitor"};
 }
 function fmt(n){return"$"+n.toLocaleString("en-US",{minimumFractionDigits:2,maximumFractionDigits:2})}
 function fK(n){return n>=1000?"$"+(n/1000).toFixed(1)+"k":fmt(n)}
 function fI(n){return"$"+Math.round(n).toLocaleString()}
 function tb(t){return`<span class="badge b-${t}">${t.toUpperCase()}</span>`}
 function ab(a){return`<span class="ab" style="background:${a.cl}15;color:${a.cl}">${a.l}</span>`}
+// "NEW" tag for chatters in their first month
+function nb(c){return c&&c.isNew?` <span style="font-size:8px;font-weight:700;letter-spacing:.5px;padding:1px 5px;border-radius:4px;background:rgba(96,165,250,0.15);color:var(--bl);vertical-align:middle">NEW</span>`:''}
 
 /* ─── Storage ───
    localStorage is the fast local cache; the server (/api/store) is the shared source of
@@ -478,7 +485,7 @@ function openCh(id){
   const c=D.find(x=>x.id===id);if(!c)return;
   const t=getTier(c),a=getAct(c),cs=gCS(id),mom=((c.momentum-1)*100).toFixed(1);
   document.getElementById('ov').classList.add('open');document.getElementById('pnl').classList.add('open');
-  document.getElementById('pT').innerHTML=`${c.n} ${tb(t)}`;
+  document.getElementById('pT').innerHTML=`${c.n}${nb(c)} ${tb(t)}`;
   const stB=cs.status?`<span class="si ${cs.status.includes('Fired')?'si-r':cs.status.includes('Coaching')||cs.status.includes('Move')?'si-a':'si-p'}">${cs.status}</span>`:'<span class="si si-p">Pending</span>';
   document.getElementById('pB').innerHTML=`
     <div style="margin-bottom:20px"><div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px"><div class="lbl">Decision</div>${stB}</div>
@@ -603,10 +610,10 @@ function renderInsights(){
     `:`<div style="font-size:12px;color:var(--gn)">✓ Payroll & Sales Record reconcile</div>`;
 
   // 2) Top performers
-  const topBody=top.map(c=>row(`<span style="color:${cols[getTier(c)]}">●</span> ${c.n}`,`${fmt(c.tot)} · ${c.pctGoal.toFixed(0)}%`,`openCh(${c.id})`)).join('')||'<div style="font-size:12px;color:var(--d)">No data</div>';
+  const topBody=top.map(c=>row(`<span style="color:${cols[getTier(c)]}">●</span> ${c.n}${nb(c)}`,`${fmt(c.tot)} · ${c.pctGoal.toFixed(0)}%`,`openCh(${c.id})`)).join('')||'<div style="font-size:12px;color:var(--d)">No data</div>';
 
   // 3) Needs attention
-  const attnBody=attn.length?attn.map(x=>row(`${ab(x.a)} ${x.c.n}`,`${fmt(x.c.tot)}`,`openCh(${x.c.id})`)).join(''):'<div style="font-size:12px;color:var(--gn)">✓ Nobody flagged</div>';
+  const attnBody=attn.length?attn.map(x=>row(`${ab(x.a)} ${x.c.n}${nb(x.c)}`,`${fmt(x.c.tot)}`,`openCh(${x.c.id})`)).join(''):'<div style="font-size:12px;color:var(--gn)">✓ Nobody flagged</div>';
 
   // 4) Recommended moves
   const moveBody=moves.length?moves.map(m=>`<div style="padding:6px 0;border-bottom:1px solid rgba(255,255,255,0.03);cursor:pointer" onclick="openCh(${m.c.id})">
@@ -688,7 +695,7 @@ function render(){
   list.sort((a,b)=>{if(sk==="n")return sd==="desc"?b.n.localeCompare(a.n):a.n.localeCompare(b.n);return sd==="desc"?(b[sk]||0)-(a[sk]||0):(a[sk]||0)-(b[sk]||0)});
   const ar=k=>sk===k?(sd==="desc"?"▼":"▲"):"";
   document.getElementById('t-chatters').innerHTML=`<div style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap;align-items:center"><span class="lbl">Filters</span><select class="fsel" onchange="ftm=this.value;render()"><option value="all">All Teams</option>${["Team 1","Team 2","Team 3","Team 4","Team 5","Team 6","Team 7"].map(t=>`<option value="${t}" ${ftm===t?"selected":""}>${t}</option>`).join('')}</select><select class="fsel" onchange="ftr=this.value;render()"><option value="all">All Tiers</option>${["star","solid","watch","critical"].map(t=>`<option value="${t}" ${ftr===t?"selected":""}>${t[0].toUpperCase()+t.slice(1)}</option>`).join('')}</select><span style="font-size:11px;color:var(--d);margin-left:auto">${list.length} chatters</span></div>
-  <div class="tw"><table><thead><tr><th>#</th><th class="s" onclick="doSort('n')">Chatter ${ar('n')}</th><th>Team</th><th>Shift</th><th class="s" onclick="doSort('tot')">${getCurMonthLabel().split(" ")[0]} $ ${ar('tot')}</th><th class="s" onclick="doSort('avgTicket')">Ticket ${ar('avgTicket')}</th><th class="s" onclick="doSort('goal')">Goal ${ar('goal')}</th><th>% Goal</th><th>Mom.</th><th>Tier</th><th>Decision</th><th>Status</th></tr></thead><tbody>${list.map((c,i)=>{const t=getTier(c),a=getAct(c),cs=store[c.id];const stH=cs&&cs.status?`<span class="si ${cs.status.includes('Fired')?'si-r':cs.status.includes('Coaching')||cs.status.includes('Move')?'si-a':'si-p'}">${cs.status}</span>`:'';return`<tr onclick="openCh(${c.id})"><td style="font-family:var(--mn);color:var(--d);font-size:10px">${i+1}</td><td style="font-weight:600;font-size:12px"><span style="color:${c.momentum>=1?'var(--gn)':c.momentum<0.7?'var(--rd)':'var(--am)'};font-size:10px">${c.momentum>=1?'▲':c.momentum<0.7?'▼':'—'}</span> ${c.n}</td><td><span style="color:${TC[c.team]||'var(--d)'};font-size:11px;font-weight:600">${c.team}</span></td><td style="font-size:11px;color:var(--m)">${c.shift}</td><td style="font-family:var(--mn);font-weight:700">${fmt(c.tot)}</td><td style="font-family:var(--mn);font-size:11px;color:${c.avgTicket>=40?'var(--gn)':c.avgTicket<25?'var(--rd)':''}">${fmt(c.avgTicket)}</td><td style="font-family:var(--mn);font-size:11px">${fK(c.goal)}</td><td style="font-family:var(--mn);font-size:11px;color:${c.pctGoal>=80?'var(--gn)':c.pctGoal>=50?'var(--am)':'var(--rd)'}">${c.pctGoal.toFixed(0)}%</td><td style="font-family:var(--mn);font-size:10px;color:${c.momentum>=1?'var(--gn)':c.momentum<0.7?'var(--rd)':'var(--am)'}">${((c.momentum-1)*100).toFixed(0)}%</td><td>${tb(t)}</td><td>${ab(a)}</td><td>${stH}</td></tr>`}).join('')}</tbody></table></div>`;
+  <div class="tw"><table><thead><tr><th>#</th><th class="s" onclick="doSort('n')">Chatter ${ar('n')}</th><th>Team</th><th>Shift</th><th class="s" onclick="doSort('tot')">${getCurMonthLabel().split(" ")[0]} $ ${ar('tot')}</th><th class="s" onclick="doSort('avgTicket')">Ticket ${ar('avgTicket')}</th><th class="s" onclick="doSort('goal')">Goal ${ar('goal')}</th><th>% Goal</th><th>Mom.</th><th>Tier</th><th>Decision</th><th>Status</th></tr></thead><tbody>${list.map((c,i)=>{const t=getTier(c),a=getAct(c),cs=store[c.id];const stH=cs&&cs.status?`<span class="si ${cs.status.includes('Fired')?'si-r':cs.status.includes('Coaching')||cs.status.includes('Move')?'si-a':'si-p'}">${cs.status}</span>`:'';return`<tr onclick="openCh(${c.id})"><td style="font-family:var(--mn);color:var(--d);font-size:10px">${i+1}</td><td style="font-weight:600;font-size:12px"><span style="color:${c.momentum>=1?'var(--gn)':c.momentum<0.7?'var(--rd)':'var(--am)'};font-size:10px">${c.momentum>=1?'▲':c.momentum<0.7?'▼':'—'}</span> ${c.n}${nb(c)}</td><td><span style="color:${TC[c.team]||'var(--d)'};font-size:11px;font-weight:600">${c.team}</span></td><td style="font-size:11px;color:var(--m)">${c.shift}</td><td style="font-family:var(--mn);font-weight:700">${fmt(c.tot)}</td><td style="font-family:var(--mn);font-size:11px;color:${c.avgTicket>=40?'var(--gn)':c.avgTicket<25?'var(--rd)':''}">${fmt(c.avgTicket)}</td><td style="font-family:var(--mn);font-size:11px">${fK(c.goal)}</td><td style="font-family:var(--mn);font-size:11px;color:${c.pctGoal>=80?'var(--gn)':c.pctGoal>=50?'var(--am)':'var(--rd)'}">${c.pctGoal.toFixed(0)}%</td><td style="font-family:var(--mn);font-size:10px;color:${c.momentum>=1?'var(--gn)':c.momentum<0.7?'var(--rd)':'var(--am)'}">${((c.momentum-1)*100).toFixed(0)}%</td><td>${tb(t)}</td><td>${ab(a)}</td><td>${stH}</td></tr>`}).join('')}</tbody></table></div>`;
 
   /* PRICING */
   const mxTk=byTk.length?Math.max(...byTk.map(c=>c.avgTicket)):1;
@@ -696,7 +703,7 @@ function render(){
 
   /* ACTIONS */
   const aL=D.map(c=>({c,...getAct(c)})).filter(a=>a.u<6).sort((a,b)=>a.u-b.u);
-  document.getElementById('t-actions').innerHTML=`<div class="lbl" style="margin-bottom:4px">${aL.filter(a=>a.u<=3).length} Urgent</div><p style="font-size:12px;color:var(--d);margin-bottom:20px">Click to take action.</p>${aL.map(a=>{const c=a.c,t=getTier(c),cs=store[c.id];const stH=cs&&cs.status?` <span class="si ${cs.status.includes('Fired')?'si-r':cs.status.includes('Coaching')||cs.status.includes('Move')?'si-a':'si-p'}">${cs.status}</span>`:'';return`<div class="card" style="padding:14px 18px;margin-bottom:10px;border-left:3px solid ${a.cl};cursor:pointer" onclick="openCh(${c.id})"><div style="display:flex;align-items:flex-start;gap:12px;flex-wrap:wrap"><div style="min-width:100px">${ab(a)}${stH}</div><div style="flex:1;min-width:180px"><div style="font-weight:700;font-size:13px">${c.n}</div><div style="font-size:11px;color:var(--d)">${c.team} · ${c.shift}</div><div style="font-size:12px;color:var(--m);margin-top:3px">${a.d}</div></div><div style="display:flex;gap:14px">${[{l:MONTHS[currentMonth],v:fmt(c.tot)},{l:"Proj",v:fmt(c.projMonth),cl:c.projVsGoal<70?'var(--rd)':c.projVsGoal>=100?'var(--gn)':''},{l:"% Goal",v:c.pctGoal.toFixed(0)+"%",cl:c.pctGoal<50?'var(--rd)':''}].map(x=>`<div><div style="font-size:9px;color:var(--d)">${x.l}</div><div style="font-size:11px;font-family:var(--mn);font-weight:600${x.cl?';color:'+x.cl:''}">${x.v}</div></div>`).join('')}</div>${tb(t)}</div></div>`}).join('')}<div style="margin:24px 0 12px;border-top:1px solid var(--b1)"></div><div class="lbl" style="margin-bottom:10px">★ Stars</div><div style="display:flex;gap:10px;flex-wrap:wrap">${D.filter(c=>getTier(c)==="star").sort((a,b)=>b.tot-a.tot).map(c=>`<div class="card" style="padding:14px;flex:1 1 200px;max-width:240px;border-top:2px solid var(--gn);cursor:pointer" onclick="openCh(${c.id})"><div style="font-weight:700;font-size:13px">${c.n}</div><div style="font-size:10px;color:var(--d)">${c.team} · ${c.shift}</div><div style="font-size:16px;font-weight:700;font-family:var(--mn);color:var(--gn);margin-top:4px">${fK(c.tot)}</div></div>`).join('')}</div>`;
+  document.getElementById('t-actions').innerHTML=`<div class="lbl" style="margin-bottom:4px">${aL.filter(a=>a.u<=3).length} Urgent</div><p style="font-size:12px;color:var(--d);margin-bottom:20px">Click to take action.</p>${aL.map(a=>{const c=a.c,t=getTier(c),cs=store[c.id];const stH=cs&&cs.status?` <span class="si ${cs.status.includes('Fired')?'si-r':cs.status.includes('Coaching')||cs.status.includes('Move')?'si-a':'si-p'}">${cs.status}</span>`:'';return`<div class="card" style="padding:14px 18px;margin-bottom:10px;border-left:3px solid ${a.cl};cursor:pointer" onclick="openCh(${c.id})"><div style="display:flex;align-items:flex-start;gap:12px;flex-wrap:wrap"><div style="min-width:100px">${ab(a)}${stH}</div><div style="flex:1;min-width:180px"><div style="font-weight:700;font-size:13px">${c.n}${nb(c)}</div><div style="font-size:11px;color:var(--d)">${c.team} · ${c.shift}</div><div style="font-size:12px;color:var(--m);margin-top:3px">${a.d}</div></div><div style="display:flex;gap:14px">${[{l:MONTHS[currentMonth],v:fmt(c.tot)},{l:"Proj",v:fmt(c.projMonth),cl:c.projVsGoal<70?'var(--rd)':c.projVsGoal>=100?'var(--gn)':''},{l:"% Goal",v:c.pctGoal.toFixed(0)+"%",cl:c.pctGoal<50?'var(--rd)':''}].map(x=>`<div><div style="font-size:9px;color:var(--d)">${x.l}</div><div style="font-size:11px;font-family:var(--mn);font-weight:600${x.cl?';color:'+x.cl:''}">${x.v}</div></div>`).join('')}</div>${tb(t)}</div></div>`}).join('')}<div style="margin:24px 0 12px;border-top:1px solid var(--b1)"></div><div class="lbl" style="margin-bottom:10px">★ Stars</div><div style="display:flex;gap:10px;flex-wrap:wrap">${D.filter(c=>getTier(c)==="star").sort((a,b)=>b.tot-a.tot).map(c=>`<div class="card" style="padding:14px;flex:1 1 200px;max-width:240px;border-top:2px solid var(--gn);cursor:pointer" onclick="openCh(${c.id})"><div style="font-weight:700;font-size:13px">${c.n}</div><div style="font-size:10px;color:var(--d)">${c.team} · ${c.shift}</div><div style="font-size:16px;font-weight:700;font-family:var(--mn);color:var(--gn);margin-top:4px">${fK(c.tot)}</div></div>`).join('')}</div>`;
 
   /* TASKS */
   document.getElementById('t-tasks').innerHTML=`
@@ -1545,7 +1552,7 @@ async function syncChatterData(){
         sheetProjEOM:mr.projEOM||0,   // the sheet's own projected end-of-month sales
         startDate:hr.startDate||'',
         tenureMonths:tenure,          // null if unknown
-        isNew:tenure!=null&&tenure<2, // new/settling: <2 months OR recent shift change — protect from harsh flags
+        isNew:tenure!=null&&tenure<=1, // "new" = first month only; after 1 month they're expected to perform
         txSales:0,txCount:0,
         daily
       });
