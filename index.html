@@ -409,7 +409,7 @@ function openCh(id){
     <div style="margin-bottom:20px"><div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px"><div class="lbl">Decision</div>${stB}</div>
     <div style="padding:14px;border-radius:12px;background:${a.cl}08;border:1px solid ${a.cl}20"><div style="font-size:14px;font-weight:700;color:${a.cl};margin-bottom:3px">${a.l}</div><div style="font-size:12px;color:var(--m)">${a.d}</div></div></div>
     <div style="margin-bottom:20px"><div class="lbl" style="margin-bottom:10px">Performance</div><div class="pg">
-      ${[{l:MONTHS[currentMonth]+" So Far",v:fmt(c.tot)},{l:"Projected "+MONTHS[currentMonth],v:fmt(c.projMonth),cl:c.projVsGoal>=100?'var(--gn)':c.projVsGoal>=70?'var(--am)':'var(--rd)'},{l:"Goal",v:fmt(c.goal)},{l:"Proj vs Goal",v:c.projVsGoal.toFixed(0)+"%",cl:c.projVsGoal>=100?'var(--gn)':c.projVsGoal>=70?'var(--am)':'var(--rd)'},{l:"Avg Ticket*",v:fmt(c.avgTicket),cl:c.avgTicket>=40?'var(--gn)':c.avgTicket<25&&c.avgTicket>0?'var(--rd)':''},{l:"Daily Avg",v:fmt(c.dailyAvg)},{l:"Momentum",v:(mom>0?'+':'')+mom+'%',cl:c.momentum>=1?'var(--gn)':c.momentum<0.7?'var(--rd)':''},{l:"Team / Shift",v:c.team+' · '+c.shift},{l:"Pace to Goal",v:c.pctGoal.toFixed(0)+"%",cl:c.pctGoal>=80?'var(--gn)':c.pctGoal>=50?'var(--am)':'var(--rd)'}].map(x=>`<div class="ps"><div class="dl">${x.l}</div><div class="dv"${x.cl?' style="color:'+x.cl+'"':''}>${x.v}</div></div>`).join('')}
+      ${[{l:MONTHS[currentMonth]+" Gross",v:fmt(c.tot)},{l:"Net (Payroll)",v:fmt(c.netPay||0),cl:'var(--d)'},{l:"Projected "+MONTHS[currentMonth],v:fmt(c.projMonth),cl:c.projVsGoal>=100?'var(--gn)':c.projVsGoal>=70?'var(--am)':'var(--rd)'},{l:"Proj vs Goal",v:c.projVsGoal.toFixed(0)+"%",cl:c.projVsGoal>=100?'var(--gn)':c.projVsGoal>=70?'var(--am)':'var(--rd)'},{l:"Avg Ticket",v:fmt(c.avgTicket),cl:c.avgTicket>=40?'var(--gn)':c.avgTicket<25&&c.avgTicket>0?'var(--rd)':''},{l:"Daily Avg",v:fmt(c.dailyAvg)},{l:"Momentum",v:(mom>0?'+':'')+mom+'%',cl:c.momentum>=1?'var(--gn)':c.momentum<0.7?'var(--rd)':''},{l:"Team / Shift",v:c.team+' · '+c.shift},{l:"Pace to Goal",v:c.pctGoal.toFixed(0)+"%",cl:c.pctGoal>=80?'var(--gn)':c.pctGoal>=50?'var(--am)':'var(--rd)'}].map(x=>`<div class="ps"><div class="dl">${x.l}</div><div class="dv"${x.cl?' style="color:'+x.cl+'"':''}>${x.v}</div></div>`).join('')}
     </div></div>
     <div style="margin-bottom:20px"><div class="lbl" style="margin-bottom:8px">Lifetime gross — all months on record (${c.monthsActive||1} mo)</div><div class="pg">
       ${[{l:"Lifetime Sales",v:fK(c.lifeSales||0)},{l:"Avg / Month",v:fmt(c.lifeMonthlyAvg||0),cl:(c.lifeMonthlyAvg||0)>=4500?'var(--gn)':(c.lifeMonthlyAvg||0)<2000?'var(--rd)':'var(--am)'},{l:"Lifetime Ticket",v:fmt(c.lifeAvgTicket||0),cl:(c.lifeAvgTicket||0)<25&&(c.lifeAvgTicket||0)>0?'var(--rd)':''}].map(x=>`<div class="ps"><div class="dl">${x.l}</div><div class="dv"${x.cl?' style="color:'+x.cl+'"':''}>${x.v}</div></div>`).join('')}
@@ -1359,7 +1359,7 @@ async function syncSalesRecord(){
       // Current month
       c.txSales=cm.net;c.txCount=cm.count;c.grossMonth=cm.gross;
       // DISCREPANCY: payroll (net) should equal gross * 0.8. Flag where it doesn't.
-      const gross=cm.gross;const netDue=gross*0.8;const payroll=c.tot;const gap=payroll-netDue;
+      const gross=cm.gross;const netDue=gross*0.8;const payroll=c.netPay;const gap=payroll-netDue;
       const pct=netDue>0?(payroll/netDue*100):100;
       if((gross>25||payroll>25)&&Math.abs(gap)>20)
         DISCREPANCIES.push({name:c.n,id:c.id,team:c.team,gross,netDue,payroll,record:netDue,gap,absGap:Math.abs(gap),pct,dir:gap<0?'short':'over'});
@@ -1461,7 +1461,7 @@ async function loadMonthlyRanking(){
     for(let i=start;i<rows.length;i++){
       const r=rows[i];const nm=(r[24]||'').toString().trim();
       if(!nm||nm.length<2||!(r[26]||'').toString().includes('$'))continue;
-      MR_DATA[normName(nm)]={count:parseInt((r[29]||'').toString().replace(/[^0-9]/g,''))||0,avgTicket:parseNum(r[30]),hours:(r[28]||'').toString().trim(),projEOM:parseNum(r[35])};
+      MR_DATA[normName(nm)]={grossSales:parseNum(r[26]),count:parseInt((r[29]||'').toString().replace(/[^0-9]/g,''))||0,avgTicket:parseNum(r[30]),hours:(r[28]||'').toString().trim(),projEOM:parseNum(r[35])};
     }
   }catch(e){console.log('Monthly Ranking error:',e.message)}
 }
@@ -1501,7 +1501,7 @@ async function syncChatterData(){
       const r=rows[i];if(!r)continue;
       const name=(r[iName]||'').toString().trim();
       if(!name||name.length<2)continue;
-      const tot=parseNum((r[iTot]||'').toString());
+      const netPay=parseNum((r[iTot]||'').toString()); // payroll NET total
       // Daily array indexed by day-1 (only this month's days)
       const daily=[];
       const elapsed=[]; // values for days 1..today, in order, for momentum
@@ -1517,6 +1517,10 @@ async function syncChatterData(){
       const sd=CHATTER_SHIFTS[name]||{};
       const hr=EMP_HR[normName(name)]||{};
       const mr=MR_DATA[normName(name)]||{};
+      // GROSS is the headline performance number (Monthly Ranking); net = payroll. Scale daily to gross.
+      const tot=(mr.grossSales&&mr.grossSales>0)?mr.grossSales:(netPay/0.8);
+      const gr=netPay>0?tot/netPay:1.25;
+      const grossDaily=daily.map(v=>v*gr);
       const shift=sd.shift||hr.shift||'';
       // Status: ZTP (offboarded/fired) from HR takes priority over the payroll status
       const payStatus=(r[iStatus]||'').toString().trim();
@@ -1530,7 +1534,7 @@ async function syncChatterData(){
         team:(r[iTeam]||'').toString().trim()||sd.team||'',
         shift,
         goal:goalForShift(shift),
-        f14,l15,tot,sales:0,
+        f14,l15,tot,netPay,sales:0,   // tot = GROSS (headline), netPay = payroll net
         mrCount:mr.count||0,          // real sale count from Monthly Ranking
         mrAvgTicket:mr.avgTicket||0,  // internally-consistent avg ticket
         hours:mr.hours||'',
@@ -1539,7 +1543,7 @@ async function syncChatterData(){
         tenureMonths:tenure,          // null if unknown
         isNew:tenure!=null&&tenure<=1, // "new" = first month only; after 1 month they're expected to perform
         txSales:0,txCount:0,
-        daily
+        daily:grossDaily
       });
     }
 
