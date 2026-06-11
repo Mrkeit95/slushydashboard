@@ -583,11 +583,14 @@ function render(){
 
   // Alerts
   const al=[];
-  if((DISCREPANCIES||[]).length)al.push({text:`${DISCREPANCIES.length} chatters with sheet discrepancies (Payroll ≠ Sales Record) — review below`,c:'var(--rd)',tab:'overview'});
+  if((DISCREPANCIES||[]).length){
+    const tot=DISCREPANCIES.reduce((s,d)=>s+(d.absGap||0),0);
+    al.push({text:`⚠ ${DISCREPANCIES.length} sales discrepancies this month — ~${fI(tot)} Payroll ≠ logged. Click to review →`,c:'var(--rd)',click:'openDiscrepancies()'});
+  }
   if(pending.filter(t=>t.pri==='urgent').length)al.push({text:`${pending.filter(t=>t.pri==='urgent').length} urgent tasks`,c:'var(--am)',tab:'tasks'});
   const flagged=D.filter(c=>c.st==="Active"&&getAct(c).u<=1).length;
   if(flagged)al.push({text:`${flagged} chatters flagged for replace / final warning`,c:'var(--or)',tab:'actions'});
-  document.getElementById('alerts').innerHTML=al.map(a=>`<div class="alert-bar" style="background:${a.c}08;border:1px solid ${a.c}20" onclick="switchTab('${a.tab}')"><span class="ap" style="background:${a.c}"></span><span style="font-size:13px;font-weight:600;color:${a.c}">${a.text}</span><span style="font-size:11px;color:var(--d);margin-left:auto">→</span></div>`).join('');
+  document.getElementById('alerts').innerHTML=al.map(a=>`<div class="alert-bar" style="background:${a.c}08;border:1px solid ${a.c}20" onclick="${a.click||("switchTab('"+a.tab+"')")}"><span class="ap" style="background:${a.c}"></span><span style="font-size:13px;font-weight:600;color:${a.c}">${a.text}</span><span style="font-size:11px;color:var(--d);margin-left:auto">→</span></div>`).join('');
 
   document.getElementById('tbar').innerHTML=TABS.map(t=>`<button class="tb${tab===t.id?' on':''}" onclick="switchTab('${t.id}')">${t.l}${t.id==='tasks'&&pending.length?`<span class="nf">${pending.length}</span>`:''}</button>`).join('');
 
