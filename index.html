@@ -1318,11 +1318,13 @@ async function syncSalesRecord(){
     const iName=h.findIndex(c=>(c||'').includes('Chatter Name'));
     const iNet=h.findIndex(c=>(c||'').includes('Net Sales'));
     const iGross=h.findIndex(c=>(c||'').includes('Gross Sales'));
-    const iMonth=h.findIndex(c=>(c||'').includes('Month Value'));
     const iTeam=h.findIndex(c=>(c||'').trim()==='Team');
     const iEST=h.findIndex(c=>(c||'').includes('Fixed EST'));
-    const iDate=h.findIndex(c=>(c||'').trim()==='Date Value');
-    const dateCol=iDate>=0?iDate:iEST; // PH 'Date Value' aligns with the month labeling
+    // Payroll is EST-based, Monthly Ranking is UTC. To compare like-for-like we bucket the
+    // Sales Record by its EST Date/Month columns (the second set, right after 'Fixed EST').
+    const afterEST=(pred)=>{if(iEST<0)return -1;for(let j=iEST+1;j<h.length;j++)if(pred((h[j]||'').toString()))return j;return -1;};
+    let iMonth=afterEST(c=>c.includes('Month Value'));if(iMonth<0)iMonth=h.findIndex(c=>(c||'').includes('Month Value'));
+    let dateCol=afterEST(c=>c.trim()==='Date Value');if(dateCol<0)dateCol=h.findIndex(c=>(c||'').trim()==='Date Value');
     if(iName<0||iNet<0)return false;
     const curLabel=MONTHS[currentMonth]+' '+currentYear;
 
