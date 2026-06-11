@@ -361,122 +361,40 @@ function closeP(){document.getElementById('ov').classList.remove('open');documen
 var DAY_RANKINGS={};
 
 function openDay(dayNum){
-  const dayData=MD.find(d=>d.d===dayNum);
-  if(!dayData)return;
-  const rankings=DAY_RANKINGS[dayNum]||[];
-  const totalSales=dayData.s;
-  const isToday=dayNum===27;
-  const slots=["12 AM","2 AM","4 AM","6 AM","8 AM","10 AM","12 PM","2 PM","4 PM","6 PM","8 PM","10 PM"];
-  const maxSlot=Math.max(...dayData.h,1);
-  const pctGoal=ME.dg>0?((totalSales/ME.dg)*100).toFixed(1):0;
-  const totalCount=rankings.reduce((s,r)=>s+r.count,0);
-  
-  // Group by team
-  const teamSales={};
-  rankings.forEach(r=>{if(!teamSales[r.team])teamSales[r.team]={sales:0,count:0,chatters:[]};teamSales[r.team].sales+=r.sales;teamSales[r.team].count+=r.count;teamSales[r.team].chatters.push(r)});
-
+  const dayData=MD.find(d=>d.d===dayNum)||{s:0};
+  const ds=DAY_STATS[dayNum]||{sales:0,count:0,chatters:{}};
+  const officialTotal=dayData.s||ds.sales;
+  const count=ds.count;const recNet=ds.sales;
+  const isToday=dayNum===new Date().getDate();
+  const pctGoal=ME.dg>0?((officialTotal/ME.dg)*100).toFixed(0):0;
+  const avg=count?recNet/count:0;
+  const chatters=Object.entries(ds.chatters||{}).map(([n,v])=>{const cc=D.find(x=>x.n===n);return{n,sales:v.sales,count:v.count,team:cc?cc.team:'',id:cc?cc.id:0}}).sort((a,b)=>b.sales-a.sales);
+  const teamMap={};chatters.forEach(c=>{const t=c.team||'—';if(!teamMap[t])teamMap[t]={sales:0,count:0};teamMap[t].sales+=c.sales;teamMap[t].count+=c.count});
+  const teams=Object.entries(teamMap).map(([t,v])=>({t,sales:v.sales,count:v.count})).sort((a,b)=>b.sales-a.sales);
   document.getElementById('ov').classList.add('open');document.getElementById('pnl').classList.add('open');
   document.getElementById('pT').innerHTML=MONTHS[currentMonth]+' '+dayNum+(isToday?' (Today)':dayNum===(new Date().getDate()-1)?' (Yesterday)':'');
   document.getElementById('pB').innerHTML=`
-    <!-- Day Summary -->
+    <div style="margin-bottom:20px"><div class="pg">
+      ${[
+        {l:"Total Sales",v:fmt(officialTotal),cl:officialTotal>=ME.dg?'var(--gn)':officialTotal>=ME.dg*0.7?'var(--am)':'var(--rd)'},
+        {l:"% of Daily Goal",v:pctGoal+'%',cl:pctGoal>=100?'var(--gn)':pctGoal>=70?'var(--am)':'var(--rd)'},
+        {l:"Sale Count",v:count||'—'},
+        {l:"Daily Goal",v:fmt(ME.dg)},
+        {l:"Avg per Sale",v:count?fmt(avg):'—'},
+        {l:"vs Goal",v:officialTotal>=ME.dg?'+'+fmt(officialTotal-ME.dg):'-'+fmt(ME.dg-officialTotal),cl:officialTotal>=ME.dg?'var(--gn)':'var(--rd)'}
+      ].map(x=>`<div class="ps"><div class="dl">${x.l}</div><div class="dv"${x.cl?' style="color:'+x.cl+'"':''}>${x.v}</div></div>`).join('')}
+    </div></div>
+    ${chatters.length?`
     <div style="margin-bottom:20px">
-      <div class="pg">
-        ${[
-          {l:"Total Sales",v:fmt(totalSales),cl:totalSales>=ME.dg?'var(--gn)':totalSales>=ME.dg*0.7?'var(--am)':'var(--rd)'},
-          {l:"% of Daily Goal",v:pctGoal+'%',cl:pctGoal>=100?'var(--gn)':pctGoal>=70?'var(--am)':'var(--rd)'},
-          {l:"Sale Count",v:totalCount||ME.tc},
-          {l:"Daily Goal",v:fmt(ME.dg)},
-          {l:"Avg per Sale",v:totalCount?fmt(totalSales/totalCount):'—'},
-          {l:"vs Goal",v:totalSales>=ME.dg?'+'+fmt(totalSales-ME.dg):'-'+fmt(ME.dg-totalSales),cl:totalSales>=ME.dg?'var(--gn)':'var(--rd)'}
-        ].map(x=>`<div class="ps"><div class="dl">${x.l}</div><div class="dv"${x.cl?' style="color:'+x.cl+'"':''}>${x.v}</div></div>`).join('')}
-      </div>
+      <div class="lbl" style="margin-bottom:10px">Chatter Sales — ${MONTHS[currentMonth]} ${dayNum} (${count} sales)</div>
+      <div class="tw"><table><thead><tr><th>#</th><th>Chatter</th><th>Team</th><th>Net $</th><th># Sales</th><th>Avg</th><th>% Day</th></tr></thead><tbody>
+      ${chatters.map((c,i)=>{const pct=recNet>0?(c.sales/recNet*100).toFixed(0):0;return `<tr ${c.id?`onclick="openCh(${c.id})" style="cursor:pointer"`:''}><td style="font-family:var(--mn);color:${i<3?'var(--pk)':'var(--d)'};font-size:11px">${i+1}</td><td style="font-weight:600;font-size:12px">${c.n}</td><td><span style="color:${teamColor(c.team)};font-size:11px;font-weight:600">${c.team||'—'}</span></td><td style="font-family:var(--mn);font-weight:700">${fmt(c.sales)}</td><td style="font-family:var(--mn);font-size:11px">${c.count}</td><td style="font-family:var(--mn);font-size:11px">${fmt(c.count?c.sales/c.count:0)}</td><td style="font-family:var(--mn);font-size:11px;color:var(--d)">${pct}%</td></tr>`}).join('')}
+      </tbody></table></div>
     </div>
-
-    <!-- Hourly Breakdown -->
-    <div style="margin-bottom:24px">
-      <div class="lbl" style="margin-bottom:12px">Hourly Sales Breakdown</div>
-      <div style="display:flex;align-items:flex-end;gap:4px;height:140px;padding:0 4px">
-        ${dayData.h.map((v,i)=>{
-          const h=maxSlot>0?Math.max((v/maxSlot)*120,v>0?4:1):1;
-          const bg=v===0?'rgba(255,255,255,0.03)':v>=maxSlot*0.7?'linear-gradient(180deg,var(--pk),var(--or))':v>=maxSlot*0.3?'rgba(255,107,53,0.5)':'rgba(255,255,255,0.12)';
-          return`<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px">
-            <div style="font-size:8px;font-family:var(--mn);color:var(--d)">${v>0?(v>=1000?fK(v):fmt(v)):''}</div>
-            <div style="width:100%;height:${h}px;border-radius:3px;background:${bg}" title="${slots[i]}: ${fmt(v)}"></div>
-            <div style="font-size:7px;color:var(--d)">${slots[i]}</div>
-          </div>`;
-        }).join('')}
-      </div>
-      <div style="display:flex;justify-content:space-between;margin-top:8px;font-size:10px;color:var(--d)">
-        <span>Peak: ${slots[dayData.h.indexOf(Math.max(...dayData.h))]} (${fmt(Math.max(...dayData.h))})</span>
-        <span>Dead hours: ${dayData.h.filter(v=>v===0).length}</span>
-      </div>
+    <div><div class="lbl" style="margin-bottom:8px">Where it came from — by Team</div>
+      ${teams.map(t=>`<div style="display:flex;align-items:center;gap:12px;padding:8px 12px;border-radius:8px;margin-bottom:5px;background:var(--s1);border:1px solid var(--b1)"><span style="font-weight:700;color:${teamColor(t.t)};width:60px">${t.t}</span><div style="flex:1;height:6px;background:rgba(255,255,255,0.04);border-radius:3px;overflow:hidden"><div style="width:${recNet>0?(t.sales/recNet*100):0}%;height:100%;background:${teamColor(t.t)};border-radius:3px"></div></div><span style="font-family:var(--mn);font-weight:700;width:80px;text-align:right">${fmt(t.sales)}</span><span style="font-size:10px;color:var(--d);width:48px;text-align:right">${t.count} sales</span></div>`).join('')}
     </div>
-
-    <!-- Chatter Rankings -->
-    ${rankings.length?`
-    <div style="margin-bottom:24px">
-      <div class="lbl" style="margin-bottom:12px">Chatter Sales Ranking</div>
-      <div class="tw"><table>
-        <thead><tr><th>#</th><th>Chatter</th><th>Team</th><th>Sales $</th><th># Sales</th><th>Avg/Sale</th><th>% of Day</th></tr></thead>
-        <tbody>
-          ${rankings.sort((a,b)=>b.sales-a.sales).map((r,i)=>{
-            const chatter=D.find(c=>c.n===r.n);
-            const pct=totalSales>0?((r.sales/totalSales)*100).toFixed(1):'0';
-            const avgSale=r.count>0?(r.sales/r.count):0;
-            return`<tr ${chatter?'onclick="openCh('+chatter.id+')" style="cursor:pointer"':''}>
-              <td style="font-family:var(--mn);color:${i<3?'var(--pk)':'var(--d)'};font-size:11px;font-weight:${i<3?700:400}">${i+1}</td>
-              <td style="font-weight:600;font-size:13px">${r.n}</td>
-              <td><span style="color:${TC[r.team]||'var(--d)'};font-size:11px;font-weight:600">${r.team}</span></td>
-              <td style="font-family:var(--mn);font-weight:700;color:${i<3?'var(--gn)':''}">${fmt(r.sales)}</td>
-              <td style="font-family:var(--mn);font-size:11px">${r.count}</td>
-              <td style="font-family:var(--mn);font-size:11px">${fmt(avgSale)}</td>
-              <td>
-                <div style="display:flex;align-items:center;gap:6px">
-                  <div style="width:60px;height:5px;background:rgba(255,255,255,0.04);border-radius:3px;overflow:hidden"><div style="width:${pct}%;height:100%;background:var(--pk);border-radius:3px"></div></div>
-                  <span style="font-family:var(--mn);font-size:10px;color:var(--d)">${pct}%</span>
-                </div>
-              </td>
-            </tr>`;
-          }).join('')}
-        </tbody>
-      </table></div>
-    </div>
-    `:'<div style="padding:20px;text-align:center;color:var(--d);font-size:13px">Individual chatter data not available for this day yet.</div>'}
-
-    <!-- Team Breakdown -->
-    ${Object.keys(teamSales).length?`
-    <div style="margin-bottom:20px">
-      <div class="lbl" style="margin-bottom:12px">Team Breakdown</div>
-      ${Object.entries(teamSales).sort((a,b)=>b[1].sales-a[1].sales).map(([team,data])=>{
-        const pct=totalSales>0?((data.sales/totalSales)*100).toFixed(1):'0';
-        return`<div style="display:flex;align-items:center;gap:12px;padding:10px 14px;border-radius:10px;margin-bottom:6px;background:var(--s1);border:1px solid var(--b1);cursor:pointer" onclick="openTeam('${team}')">
-          <span style="font-weight:700;color:${TC[team]};width:60px">${team}</span>
-          <div style="flex:1;height:6px;background:rgba(255,255,255,0.04);border-radius:3px;overflow:hidden"><div style="width:${pct}%;height:100%;background:${TC[team]};border-radius:3px"></div></div>
-          <span style="font-family:var(--mn);font-weight:700;width:80px;text-align:right">${fmt(data.sales)}</span>
-          <span style="font-size:10px;color:var(--d);width:40px;text-align:right">${pct}%</span>
-          <span style="font-size:10px;color:var(--d);width:50px;text-align:right">${data.count} sales</span>
-        </div>`;
-      }).join('')}
-    </div>
-    `:''}
-
-    <!-- Creator Revenue (estimated from team data) -->
-    ${Object.keys(teamSales).length?`
-    <div>
-      <div class="lbl" style="margin-bottom:8px">Estimated Creator Revenue</div>
-      <div style="font-size:11px;color:var(--d);margin-bottom:12px">Based on team chatter sales. Each team's revenue flows to their managed creators.</div>
-      ${Object.entries(teamSales).sort((a,b)=>b[1].sales-a[1].sales).map(([team,data])=>{
-        const creators=CR.filter(c=>c.t===team).sort((a,b)=>b.g-a.g).slice(0,5);
-        return creators.map(cr=>`
-          <div style="display:flex;align-items:center;gap:10px;padding:6px 14px;border-radius:8px;margin-bottom:4px;background:var(--s1)" onclick="openTeam('${team}')" style="cursor:pointer">
-            <span style="font-size:12px;font-weight:600;color:${TC[team]};width:160px">${cr.n}</span>
-            <span style="font-size:10px;color:var(--d);width:50px">${team}</span>
-            <span style="font-size:10px;color:var(--d)">Goal: ${fmt(cr.g)}</span>
-          </div>
-        `).join('');
-      }).join('')}
-    </div>
-    `:''}
+    `:'<div style="padding:20px;text-align:center;color:var(--d);font-size:13px">No transaction-level sales logged for this day yet.</div>'}
   `;
 }
 
@@ -565,11 +483,12 @@ function recommendedMoves(){
   return moves.sort((a,b)=>a.pri-b.pri||b.c.tot-a.c.tot);
 }
 /* Full discrepancy list — opens in the side panel */
+function monthKey(label){const p=(label||'').split(' ');const m=MONTHS.indexOf(p[0]);return (parseInt(p[1])||0)*12+(m>=0?m:0);}
+function discMonths(){return Object.keys(MONTH_STATS).filter(m=>MONTH_STATS[m]&&MONTH_STATS[m].total>=500).sort((a,b)=>monthKey(a)-monthKey(b));}
 function discrepancyText(){
   const disc=(DISCREPANCIES||[]);
-  const lines=['SLUSHY — Data Discrepancies ('+getCurMonthLabel()+')',
-    'Payroll total vs Sales Record captured, per chatter:',''];
-  disc.forEach(d=>lines.push(`${d.name} (${d.team||'—'}): Payroll ${fmt(d.payroll)} | Record ${fmt(d.record)} | Gap ${fmt(d.gap)} | ${d.pct.toFixed(0)}% captured`));
+  const lines=['SLUSHY — Data Discrepancies ('+getCurMonthLabel()+')','Payroll vs logged Sales Record, per chatter:',''];
+  disc.forEach(d=>lines.push(`${d.name} (${d.team||'—'}): Payroll ${fmt(d.payroll)} | Logged ${fmt(d.record)} | Gap ${fmt(d.gap)} | ${d.pct.toFixed(0)}% captured`));
   lines.push('', `Total: ${disc.length} chatters, ~${fI(disc.reduce((s,d)=>s+d.gap,0))} unaccounted.`);
   return lines.join('\n');
 }
@@ -578,18 +497,39 @@ function copyDiscrepancies(){
   if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(t).then(()=>toast('Copied — paste to send Corn')).catch(()=>toast('Copy failed'));}
   else{toast('Copy not supported here')}
 }
-function openDiscrepancies(){
-  const disc=(DISCREPANCIES||[]);
-  const totGap=disc.reduce((s,d)=>s+d.gap,0);
-  document.getElementById('ov').classList.add('open');
-  document.getElementById('pnl').classList.add('open');
-  document.getElementById('pT').innerHTML='⚠ Data Discrepancies ('+disc.length+')';
+function openDiscrepancies(sel){
+  const months=discMonths();
+  const curLabel=MONTHS[currentMonth]+' '+currentYear;
+  if(!sel||!MONTH_STATS[sel])sel=months.includes(curLabel)?curLabel:(months[months.length-1]||curLabel);
+  const ms=MONTH_STATS[sel]||{total:0,count:0,chatters:{},teams:{}};
+  const isCur=(sel===curLabel);
+  const chatters=Object.entries(ms.chatters).map(([n,v])=>{const cc=D.find(x=>x.n===n);return{n,sales:v.sales,count:v.count,avg:v.count?v.sales/v.count:0,team:cc?cc.team:'',id:cc?cc.id:0}}).sort((a,b)=>b.sales-a.sales);
+  const teams=Object.entries(ms.teams).map(([t,s])=>({t,s})).sort((a,b)=>b.s-a.s);
+  const avgT=ms.count?ms.total/ms.count:0;const disc=isCur?(DISCREPANCIES||[]):[];
+  document.getElementById('ov').classList.add('open');document.getElementById('pnl').classList.add('open');
+  document.getElementById('pT').innerHTML='Monthly Sales & Discrepancies';
+  const tabs=months.map(m=>`<button onclick="openDiscrepancies('${m}')" style="padding:6px 11px;border-radius:8px;border:1px solid ${m===sel?'var(--pk)':'var(--b2)'};background:${m===sel?'rgba(255,60,172,0.12)':'transparent'};color:${m===sel?'var(--pk)':'var(--d)'};font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap;font-family:var(--ff)">${m.replace(' 20'," '")}</button>`).join('');
+  let discBlock='';
+  if(isCur&&disc.length){const g=disc.reduce((s,d)=>s+d.gap,0);
+    discBlock=`<div style="padding:12px;border-radius:10px;background:rgba(255,59,92,0.06);border:1px solid rgba(255,59,92,0.2);margin-bottom:14px"><div style="font-size:13px;font-weight:700;color:var(--rd);margin-bottom:8px">⚠ ${disc.length} chatters — Payroll ≠ logged (~${fI(g)} unaccounted)</div><button class="ns" onclick="copyDiscrepancies()">📋 Copy for Corn</button><div class="tw" style="margin-top:10px"><table><thead><tr><th>Chatter</th><th>Payroll</th><th>Logged</th><th>Gap</th><th>%</th></tr></thead><tbody>${disc.map(d=>`<tr onclick="openCh(${d.id})" style="cursor:pointer"><td style="font-weight:600;font-size:12px">${d.name}</td><td style="font-family:var(--mn);font-size:11px">${fmt(d.payroll)}</td><td style="font-family:var(--mn);font-size:11px;color:var(--am)">${fmt(d.record)}</td><td style="font-family:var(--mn);font-size:11px;color:var(--rd)">${fmt(d.gap)}</td><td style="font-family:var(--mn);font-size:11px;color:${d.pct>=80?'var(--gn)':'var(--rd)'}">${d.pct.toFixed(0)}%</td></tr>`).join('')}</tbody></table></div></div>`;
+  }else if(isCur){
+    discBlock=`<div style="padding:10px 12px;border-radius:10px;background:rgba(0,229,155,0.06);border:1px solid rgba(0,229,155,0.2);margin-bottom:14px;font-size:12px;color:var(--gn)">✓ Payroll and the logged Sales Record reconcile this month.</div>`;
+  }else{
+    discBlock=`<div style="font-size:11px;color:var(--d);margin-bottom:14px">Past month — showing what was logged. (Per-chatter Payroll-vs-logged discrepancies are only available for the current month, since Payroll isn't kept historically.)</div>`;
+  }
   document.getElementById('pB').innerHTML=`
-    <p style="font-size:12px;color:var(--m);margin-bottom:6px">Each chatter's <strong>Payroll</strong> tab total vs what the <strong>Sales Record</strong> tab actually captured. A low % means the Sales Record is missing transactions that managers/chatters were supposed to log.</p>
-    <p style="font-size:12px;color:var(--rd);margin-bottom:14px">~${fI(totGap)} unaccounted across ${disc.length} chatters this month.</p>
-    <button class="ns" style="margin-bottom:14px" onclick="copyDiscrepancies()">📋 Copy full list (for Corn)</button>
-    <div class="tw"><table><thead><tr><th>Chatter</th><th>Team</th><th>Payroll</th><th>Record</th><th>Gap</th><th>Captured</th></tr></thead>
-    <tbody>${disc.map(d=>`<tr onclick="openCh(${d.id})"><td style="font-weight:600;font-size:12px">${d.name}</td><td style="color:${teamColor(d.team)};font-size:11px;font-weight:600">${d.team||'—'}</td><td style="font-family:var(--mn);font-size:11px">${fmt(d.payroll)}</td><td style="font-family:var(--mn);font-size:11px;color:var(--am)">${fmt(d.record)}</td><td style="font-family:var(--mn);font-size:11px;color:var(--rd);font-weight:700">${fmt(d.gap)}</td><td style="font-family:var(--mn);font-size:11px;color:${d.pct>=80?'var(--gn)':d.pct>=50?'var(--am)':'var(--rd)'}">${d.pct.toFixed(0)}%</td></tr>`).join('')}</tbody></table></div>`;
+    <div style="display:flex;gap:6px;overflow-x:auto;margin-bottom:16px;padding-bottom:4px">${tabs}</div>
+    <div class="pg" style="margin-bottom:16px">
+      ${[{l:'Net Sales',v:fmt(ms.total)},{l:'Transactions',v:ms.count.toLocaleString()},{l:'Avg Ticket',v:fmt(avgT)}].map(x=>`<div class="ps"><div class="dl">${x.l}</div><div class="dv">${x.v}</div></div>`).join('')}
+    </div>
+    ${discBlock}
+    <div class="lbl" style="margin:6px 0 8px">By Chatter — ${chatters.length} active in ${sel}</div>
+    <div class="tw"><table><thead><tr><th>Chatter</th><th>Team</th><th>Net $</th><th># Sales</th><th>Avg</th></tr></thead><tbody>
+    ${chatters.map(c=>`<tr ${c.id?`onclick="openCh(${c.id})" style="cursor:pointer"`:''}><td style="font-weight:600;font-size:12px">${c.n}</td><td><span style="color:${teamColor(c.team)};font-size:11px;font-weight:600">${c.team||'—'}</span></td><td style="font-family:var(--mn);font-weight:700">${fmt(c.sales)}</td><td style="font-family:var(--mn);font-size:11px">${c.count}</td><td style="font-family:var(--mn);font-size:11px;color:${c.avg<25?'var(--rd)':c.avg>=40?'var(--gn)':''}">${fmt(c.avg)}</td></tr>`).join('')}
+    </tbody></table></div>
+    <div class="lbl" style="margin:18px 0 8px">Where it came from — by Team</div>
+    ${teams.map(t=>`<div style="display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid rgba(255,255,255,0.03)"><span style="color:${teamColor(t.t)};font-weight:600;font-size:12px">${t.t}</span><span style="font-family:var(--mn);font-size:12px">${fmt(t.s)} <span style="color:var(--d);font-size:10px">(${ms.total>0?(t.s/ms.total*100).toFixed(0):0}%)</span></span></div>`).join('')}
+  `;
 }
 
 function renderInsights(){
@@ -605,12 +545,12 @@ function renderInsights(){
   const row=(left,right,onclick)=>`<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;padding:5px 0;border-bottom:1px solid rgba(255,255,255,0.03);cursor:pointer" onclick="${onclick||''}"><span style="font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${left}</span><span style="font-size:11px;font-family:var(--mn);white-space:nowrap">${right}</span></div>`;
 
   // 1) Data accuracy / discrepancies
-  const discBody=disc.length?`
+  const discBody=(disc.length?`
     <div style="font-size:22px;font-weight:700;font-family:var(--mn);color:var(--rd);line-height:1">${disc.length}</div>
-    <div style="font-size:10px;color:var(--d);margin:2px 0 8px">chatters · ~${fI(discGap)} unaccounted in Sales Record</div>
-    ${disc.slice(0,5).map(d=>row(`${d.name} <span style="color:var(--d);font-size:10px">${d.team||''}</span>`,`<span style="color:var(--rd)">${d.pct.toFixed(0)}%</span> · gap ${fI(d.gap)}`,`openCh(${d.id})`)).join('')}
-    <button class="ns" style="margin-top:10px;width:100%" onclick="openDiscrepancies()">View all ${disc.length} discrepancies →</button>
-    `:`<div style="font-size:12px;color:var(--gn)">✓ Payroll & Sales Record reconcile</div>`;
+    <div style="font-size:10px;color:var(--d);margin:2px 0 8px">chatters · ~${fI(discGap)} unaccounted this month</div>
+    ${disc.slice(0,4).map(d=>row(`${d.name} <span style="color:var(--d);font-size:10px">${d.team||''}</span>`,`<span style="color:var(--rd)">${d.pct.toFixed(0)}%</span> · gap ${fI(d.gap)}`,`openCh(${d.id})`)).join('')}
+    `:`<div style="font-size:12px;color:var(--gn);margin-bottom:8px">✓ Payroll & Sales Record reconcile this month</div>`)+
+    `<button class="ns" style="margin-top:10px;width:100%" onclick="openDiscrepancies()">📅 View every month →</button>`;
 
   // 2) Top performers
   const topBody=top.map(c=>row(`<span style="color:${cols[getTier(c)]}">●</span> ${c.n}${nb(c)}`,`${fmt(c.tot)} · ${c.pctGoal.toFixed(0)}%`,`openCh(${c.id})`)).join('')||'<div style="font-size:12px;color:var(--d)">No data</div>';
@@ -1243,6 +1183,7 @@ async function syncSalesData(){
     let paHdr=-1;
     for(let i=0;i<Math.min(paRows.length,15);i++){if((paRows[i]||[])[27]&&paRows[i][27].toString().trim()==='Model/Page'){paHdr=i;break}}
 
+    await loadPageInfo(); // accurate creator -> team map
     // Enrichment from the monthly breakdown tab (MoM%, sale count, follows, visits, account type)
     const extras={};const res=await resolveModelTab();
     if(res){crMonthLabel=res.label;const mr=res.rows;
@@ -1260,7 +1201,7 @@ async function syncSalesData(){
         if(!name||name.length<2||!rank)continue;
         const ex=extras[normName(name)]||{};
         CR.push({
-          id:name.toLowerCase().replace(/\s+/g,''),n:name,t:'',g:parseNum(r[30]),
+          id:name.toLowerCase().replace(/\s+/g,''),n:name,t:MODEL_TEAM[mkey(name)]||'',g:parseNum(r[30]),
           rank,sales:parseNum(r[28]),proj:parseNum(r[29]),
           percentile:parseNum(r[31]),allocation:parseNum(r[32]),
           mom:ex.mom||0,count:ex.count||0,follows:ex.follows||0,visits:ex.visits||0,
@@ -1322,7 +1263,7 @@ async function syncReferenceData(){
       const key=c.n.toLowerCase().replace(/\s+/g,'');
       const ref=refMap[key]||refMap[c.n.toLowerCase()];
       if(ref){
-        c.t=ref.team||c.t;
+        if(!c.t)c.t=ref.team; // Page Info team is primary; Reference only fills blanks
         if(!c.g)c.g=ref.goal; // keep Page Analysis goal as primary
         c.status=ref.status||'Active';
       }
@@ -1355,6 +1296,8 @@ async function syncPrevMonth(){
    • current month only → for the Payroll-vs-record discrepancy check + avg-ticket fallback ── */
 var LIFE_DATA={}; // {chatterName: {sales, count, months}}
 var DISCREPANCIES=[]; // [{name, payroll, record, gap, pct}]
+var MONTH_STATS={};   // {monthLabel: {total, count, chatters:{name:{sales,count}}, teams:{team:sales}}}
+var DAY_STATS={};     // current month: {day: {sales, count}} — accurate per-day counts
 
 async function syncSalesRecord(){
   try{
@@ -1371,17 +1314,31 @@ async function syncSalesRecord(){
     const iName=h.findIndex(c=>(c||'').includes('Chatter Name'));
     const iNet=h.findIndex(c=>(c||'').includes('Net Sales'));
     const iMonth=h.findIndex(c=>(c||'').includes('Month Value'));
+    const iTeam=h.findIndex(c=>(c||'').trim()==='Team');
+    const iEST=h.findIndex(c=>(c||'').includes('Fixed EST'));
+    const iDate=h.findIndex(c=>(c||'').trim()==='Date Value');
+    const dateCol=iDate>=0?iDate:iEST; // PH 'Date Value' aligns with the month labeling
     if(iName<0||iNet<0)return false;
     const curLabel=MONTHS[currentMonth]+' '+currentYear;
 
-    LIFE_DATA={};const cur={};
+    LIFE_DATA={};const cur={};MONTH_STATS={};DAY_STATS={};
     for(let i=hdr+1;i<rows.length;i++){
       const r=rows[i];const name=(r[iName]||'').trim();
       if(!name||name.length<2)continue;
       const net=parseNum(r[iNet]);const month=iMonth>=0?(r[iMonth]||'').trim():'';
+      const team=iTeam>=0?(r[iTeam]||'').trim():'';
       if(!LIFE_DATA[name])LIFE_DATA[name]={sales:0,count:0,months:{}};
       LIFE_DATA[name].sales+=net;LIFE_DATA[name].count++;if(month)LIFE_DATA[name].months[month]=true;
-      if(month===curLabel){if(!cur[name])cur[name]={sales:0,count:0};cur[name].sales+=net;cur[name].count++;}
+      if(month){
+        if(!MONTH_STATS[month])MONTH_STATS[month]={total:0,count:0,chatters:{},teams:{}};
+        const ms=MONTH_STATS[month];ms.total+=net;ms.count++;
+        if(!ms.chatters[name])ms.chatters[name]={sales:0,count:0};ms.chatters[name].sales+=net;ms.chatters[name].count++;
+        if(team&&/team/i.test(team))ms.teams[team]=(ms.teams[team]||0)+net;
+      }
+      if(month===curLabel){
+        if(!cur[name])cur[name]={sales:0,count:0};cur[name].sales+=net;cur[name].count++;
+        if(dateCol>=0){const dm=(r[dateCol]||'').toString().match(/(\d+)\/(\d+)\/(\d+)/);if(dm){const day=parseInt(dm[2]);if(day>=1&&day<=31){if(!DAY_STATS[day])DAY_STATS[day]={sales:0,count:0,chatters:{}};const dst=DAY_STATS[day];dst.sales+=net;dst.count++;if(!dst.chatters[name])dst.chatters[name]={sales:0,count:0};dst.chatters[name].sales+=net;dst.chatters[name].count++;}}}
+      }
     }
 
     DISCREPANCIES=[];
@@ -1453,6 +1410,30 @@ async function loadReferenceHR(){
       EMP_HR[normName(nm)]={status:(r[iN+1]||'').toString().trim(),startDate:(r[iN+4]||'').toString().trim(),endDate:(r[iN+5]||'').toString().trim(),shift:(r[iN+6]||'').toString().trim()};
     }
   }catch(e){console.log('Reference HR error:',e.message)}
+}
+
+/* ── Accurate creator→team map from the "Page Info" grid: each team is a column pair
+   (col 2 = Team 1 models, col 4 = Team 2 … col 18 = Team 9); team label is in row 0. ── */
+function mkey(s){return (s||'').toString().toLowerCase().replace(/[^a-z0-9]/g,'')}
+var MODEL_TEAM={};
+async function loadPageInfo(){
+  try{
+    const resp=await fetch(SALES_SHEET_BASE+encodeURIComponent('Page Info'));
+    if(!resp.ok)return;
+    const rows=parseCSV(await resp.text());
+    if(!rows.length)return;
+    const hdr=rows[0]||[];const map={};
+    for(let c=2;c<hdr.length;c+=2){
+      const tm=(hdr[c]||'').toString().match(/team\s*\d+/i);
+      if(!tm)continue;
+      const team='Team '+tm[0].replace(/\D/g,'');
+      for(let r=1;r<rows.length;r++){
+        const name=(rows[r]&&rows[r][c]||'').toString().trim();
+        if(name&&name.length>1&&!/^\$/.test(name)&&mkey(name))map[mkey(name)]=team;
+      }
+    }
+    if(Object.keys(map).length>5)MODEL_TEAM=map;
+  }catch(e){console.log('Page Info error:',e.message)}
 }
 
 /* ── True count/avg/hours + the sheet's own projected EOM from the Monthly Ranking chatter table.
