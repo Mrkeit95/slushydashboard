@@ -260,36 +260,36 @@ function enrich(){
 }
 enrich();
 
+/* Tier by the agency's real performance levers: avg ticket (upselling skill) + pace to goal.
+   New/settling hires are never rated below 'watch'; ZTP is offboarded. */
 function getTier(c){
   if(c.st==="ZTP")return"critical";   // offboarded (excluded from active analytics)
   if(c.st==="PTO")return"watch";
-  const active=D.filter(x=>x.st==="Active");
-  const mxProj=Math.max(...active.map(x=>x.projMonth||x.tot),1);
-  // Score: projected end-of-month revenue vs peers (35), pace vs goal (25), avg ticket (20), trend (20)
-  const s1=Math.min((c.projMonth/mxProj)*35,35);
-  const s2=Math.min((c.projVsGoal/100)*25,25);
-  const s3=Math.min((c.avgTicket/40)*20,20);
-  const s4=Math.min((Math.min(c.momentum,2)/2)*20,20);
-  const s=s1+s2+s3+s4;
-  // New chatters lack history — never auto-rate them below 'watch'
-  if(c.isNew)return s>=62?"star":s>=42?"solid":"watch";
-  return s>=62?"star":s>=42?"solid":s>=25?"watch":"critical"
+  const tk=c.avgTicket||0,pace=c.projVsGoal||0;
+  if(c.isNew){ if(tk>=28&&pace>=110)return"star"; if(tk>=22&&pace>=90)return"solid"; return"watch"; }
+  if((tk<18&&pace<85)||pace<55)return"critical";   // low skill + behind, or badly behind
+  if(tk>=28&&pace>=110)return"star";
+  if(tk>=22&&pace>=90)return"solid";
+  return"watch";
 }
 function getAct(c){
   if(c.st==="ZTP")return{l:"Offboarded",cl:"var(--d)",u:11,d:"ZTP — no longer active. Excluded from analytics.",y:"info"};
   if(c.st==="PTO")return{l:"PTO",cl:"var(--d)",u:10,d:"Inactive (PTO).",y:"info"};
-  if(c.isNew)return{l:"New / Settling",cl:"var(--bl)",u:7,d:"Started "+(c.startDate||'recently')+" (~"+(c.tenureMonths?c.tenureMonths.toFixed(1):'<1')+" mo) — or recent shift change. Too little history to judge fairly; coach and give time.",y:"new"};
+  const tk=c.avgTicket||0,pace=c.projVsGoal||0,mom=c.momentum||1,momPct=((mom-1)*100).toFixed(0);
+  const ten=c.tenureMonths;
+  // New/settling — flag for attention but NEVER recommend firing (too little history)
+  if(c.isNew){
+    if(tk<20)return{l:"New · Coach",cl:"var(--bl)",u:6,d:"~"+(ten?ten.toFixed(1):'<1')+"mo in. Low ticket ("+fmt(tk)+") — coach upselling; too early to judge.",y:"new"};
+    return{l:"New · Monitor",cl:"var(--bl)",u:7,d:"~"+(ten?ten.toFixed(1):'<1')+"mo in. Give time & monitor.",y:"new"};
+  }
   const t=getTier(c);
-  const pace=c.projVsGoal||0,mom=c.momentum||1,momPct=((mom-1)*100).toFixed(0);
-  const proj=c.projMonth||c.tot;const ten=c.tenureMonths;
-  const established=(ten==null||ten>=2);
-  if(t==="critical"&&pace<55&&mom<0.85&&established)return{l:"Replace",cl:"var(--rd)",u:0,d:"Projected "+fmt(proj)+" ("+pace.toFixed(0)+"% of goal) and declining. Replace candidate.",y:"terminate"};
-  if(t==="critical")return{l:"Final Warning",cl:"var(--or)",u:1,d:"Bottom tier — projected "+fmt(proj)+", only "+pace.toFixed(0)+"% of goal. Must improve this cycle.",y:"warning"};
-  if(t==="watch"&&mom<0.85)return{l:"Coach",cl:"var(--am)",u:3,d:"Declining trend ("+momPct+"%), "+fmt(c.avgTicket)+" avg ticket. Coach this week.",y:"coach"};
-  if(t==="watch")return{l:"Monitor",cl:"var(--am)",u:3,d:"Projected "+fmt(proj)+" ("+pace.toFixed(0)+"% of goal). Weekly check-ins.",y:"monitor"};
-  if(t==="solid"&&pace>120&&mom>=1)return{l:"Promote",cl:"var(--tl)",u:5,d:"Projected to beat goal ("+pace.toFixed(0)+"%) and rising. Ready for a higher-value page.",y:"promote"};
-  if(t==="star")return{l:"★ Star",cl:"var(--gn)",u:6,d:"Projected "+fmt(proj)+", "+fmt(c.avgTicket)+" ticket. Protect & keep on a top page.",y:"star"};
-  return{l:"Maintain",cl:"var(--d)",u:4,d:"On track — projected "+fmt(proj)+" ("+pace.toFixed(0)+"% of goal).",y:"maintain"}
+  if(t==="critical"&&tk<15&&pace<70)return{l:"Replace",cl:"var(--rd)",u:0,d:"Established, very low ticket ("+fmt(tk)+") at "+pace.toFixed(0)+"% of goal. Replace candidate.",y:"terminate"};
+  if(t==="critical")return{l:"Final Warning",cl:"var(--or)",u:1,d:"Underperforming — "+fmt(tk)+" ticket, "+pace.toFixed(0)+"% of goal. Must improve this cycle.",y:"warning"};
+  if(t==="watch"&&tk<22)return{l:"Coach",cl:"var(--am)",u:3,d:"Low avg ticket ("+fmt(tk)+"). Needs upselling training.",y:"coach"};
+  if(t==="watch")return{l:"Monitor",cl:"var(--am)",u:3,d:pace.toFixed(0)+"% of goal, "+fmt(tk)+" ticket"+(mom<0.85?" · declining ("+momPct+"%)":"")+". Weekly check-ins.",y:"monitor"};
+  if(t==="solid"&&pace>120)return{l:"Promote",cl:"var(--tl)",u:5,d:"Beating goal ("+pace.toFixed(0)+"%), "+fmt(tk)+" ticket. Ready for a higher page.",y:"promote"};
+  if(t==="star")return{l:"★ Star",cl:"var(--gn)",u:6,d:fmt(tk)+" ticket at "+pace.toFixed(0)+"% of goal. Protect & keep on a top page.",y:"star"};
+  return{l:"Maintain",cl:"var(--d)",u:4,d:"On track — "+fmt(tk)+" ticket, "+pace.toFixed(0)+"% of goal.",y:"maintain"}
 }
 function fmt(n){return"$"+n.toLocaleString("en-US",{minimumFractionDigits:2,maximumFractionDigits:2})}
 function fK(n){return n>=1000?"$"+(n/1000).toFixed(1)+"k":fmt(n)}
@@ -310,8 +310,19 @@ async function pullStore(){
       fetch(STORE_BASE+'store').then(r=>r.json()).catch(()=>({ok:false}))
     ]);
     STORE_OK=(t&&t.ok!==false);
-    if(t&&t.ok&&t.value!=null)localStorage.setItem('st7',JSON.stringify(t.value));
-    if(s&&s.ok&&s.value!=null)localStorage.setItem('sv7',JSON.stringify(s.value));
+    // Tasks: MERGE by id (don't overwrite). Vercel Blob is eventually-consistent, so a read
+    // right after a write can return a stale list — merging guarantees locally-added tasks
+    // are never lost, while still pulling in tasks other team members added.
+    if(t&&t.ok&&Array.isArray(t.value)){
+      const byId={};
+      t.value.forEach(x=>{if(x&&x.id!=null)byId[x.id]=x});
+      gT().forEach(x=>{if(x&&x.id!=null)byId[x.id]=x}); // local wins on conflict
+      try{localStorage.setItem('st7',JSON.stringify(Object.values(byId)))}catch(e){}
+    }
+    // Notes/actions store: shallow-merge per chatter, local wins
+    if(s&&s.ok&&s.value&&typeof s.value==='object'){
+      try{localStorage.setItem('sv7',JSON.stringify(Object.assign({},s.value,gS())))}catch(e){}
+    }
   }catch(e){STORE_OK=false}
 }
 function pushStore(key,val){
@@ -616,7 +627,7 @@ function render(){
   const active=D.filter(c=>c.st==="Active");const tiers={star:0,solid:0,watch:0,critical:0};D.forEach(c=>tiers[getTier(c)]++);
   const avgT=active.length>0?active.reduce((s,c)=>s+c.avgTicket,0)/active.length:0;
   const byTk=active.length?[...active].sort((a,b)=>b.avgTicket-a.avgTicket):[];
-  const recovery=active.filter(c=>c.avgTicket<30).reduce((s,c)=>(35-c.avgTicket)*c.sales*0.5,0);
+  const recovery=active.filter(c=>c.avgTicket<30).reduce((s,c)=>s+(35-c.avgTicket)*c.sales*0.5,0);
   const store=gS();const tasks=gT();const pending=tasks.filter(t=>!t.done);
 
   // Alerts
