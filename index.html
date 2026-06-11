@@ -488,8 +488,8 @@ function discMonths(){return Object.keys(MONTH_STATS).filter(m=>MONTH_STATS[m]&&
 function discrepancyText(){
   const disc=(DISCREPANCIES||[]);
   const lines=['SLUSHY — Data Discrepancies ('+getCurMonthLabel()+')','Payroll vs logged Sales Record, per chatter:',''];
-  disc.forEach(d=>lines.push(`${d.name} (${d.team||'—'}): Payroll ${fmt(d.payroll)} | Logged ${fmt(d.record)} | Gap ${fmt(d.gap)} | ${d.pct.toFixed(0)}% captured`));
-  lines.push('', `Total: ${disc.length} chatters, ~${fI(disc.reduce((s,d)=>s+d.gap,0))} unaccounted.`);
+  disc.forEach(d=>lines.push(`${d.name} (${d.team||'—'}): Payroll ${fmt(d.payroll)} | Logged ${fmt(d.record)} | ${fmt(d.absGap||Math.abs(d.gap))} ${d.dir||(d.gap>0?'under':'over')}`));
+  lines.push('', `Total: ${disc.length} chatters, ~${fI(disc.reduce((s,d)=>s+(d.absGap||Math.abs(d.gap)),0))} total mismatch (under = log missing, over = log ahead).`);
   return lines.join('\n');
 }
 function copyDiscrepancies(){
@@ -511,7 +511,8 @@ function openDiscrepancies(sel){
   const tabs=months.map(m=>`<button onclick="openDiscrepancies('${m}')" style="padding:6px 11px;border-radius:8px;border:1px solid ${m===sel?'var(--pk)':'var(--b2)'};background:${m===sel?'rgba(255,60,172,0.12)':'transparent'};color:${m===sel?'var(--pk)':'var(--d)'};font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap;font-family:var(--ff)">${m.replace(' 20'," '")}</button>`).join('');
   let discBlock='';
   if(isCur&&disc.length){const g=disc.reduce((s,d)=>s+d.gap,0);
-    discBlock=`<div style="padding:12px;border-radius:10px;background:rgba(255,59,92,0.06);border:1px solid rgba(255,59,92,0.2);margin-bottom:14px"><div style="font-size:13px;font-weight:700;color:var(--rd);margin-bottom:8px">⚠ ${disc.length} chatters — Payroll ≠ logged (~${fI(g)} unaccounted)</div><button class="ns" onclick="copyDiscrepancies()">📋 Copy for Corn</button><div class="tw" style="margin-top:10px"><table><thead><tr><th>Chatter</th><th>Payroll</th><th>Logged</th><th>Gap</th><th>%</th></tr></thead><tbody>${disc.map(d=>`<tr onclick="openCh(${d.id})" style="cursor:pointer"><td style="font-weight:600;font-size:12px">${d.name}</td><td style="font-family:var(--mn);font-size:11px">${fmt(d.payroll)}</td><td style="font-family:var(--mn);font-size:11px;color:var(--am)">${fmt(d.record)}</td><td style="font-family:var(--mn);font-size:11px;color:var(--rd)">${fmt(d.gap)}</td><td style="font-family:var(--mn);font-size:11px;color:${d.pct>=80?'var(--gn)':'var(--rd)'}">${d.pct.toFixed(0)}%</td></tr>`).join('')}</tbody></table></div></div>`;
+    const totAbs=disc.reduce((s,d)=>s+d.absGap,0);
+    discBlock=`<div style="padding:12px;border-radius:10px;background:rgba(255,59,92,0.06);border:1px solid rgba(255,59,92,0.2);margin-bottom:14px"><div style="font-size:13px;font-weight:700;color:var(--rd);margin-bottom:4px">⚠ ${disc.length} chatters — Payroll ≠ logged Sales Record</div><div style="font-size:11px;color:var(--d);margin-bottom:8px">~${fI(totAbs)} total mismatch · <span style="color:var(--rd)">under</span> = log missing sales, <span style="color:var(--am)">over</span> = log ahead of payroll (lag/dupes)</div><button class="ns" onclick="copyDiscrepancies()">📋 Copy for Corn</button><div class="tw" style="margin-top:10px"><table><thead><tr><th>Chatter</th><th>Payroll</th><th>Logged</th><th>Difference</th></tr></thead><tbody>${disc.map(d=>`<tr onclick="openCh(${d.id})" style="cursor:pointer"><td style="font-weight:600;font-size:12px">${d.name}</td><td style="font-family:var(--mn);font-size:11px">${fmt(d.payroll)}</td><td style="font-family:var(--mn);font-size:11px">${fmt(d.record)}</td><td style="font-family:var(--mn);font-size:11px;color:${d.dir==='under'?'var(--rd)':'var(--am)'}">${fmt(d.absGap)} ${d.dir}</td></tr>`).join('')}</tbody></table></div></div>`;
   }else if(isCur){
     discBlock=`<div style="padding:10px 12px;border-radius:10px;background:rgba(0,229,155,0.06);border:1px solid rgba(0,229,155,0.2);margin-bottom:14px;font-size:12px;color:var(--gn)">✓ Payroll and the logged Sales Record reconcile this month.</div>`;
   }else{
@@ -535,7 +536,7 @@ function openDiscrepancies(sel){
 function renderInsights(){
   const active=D.filter(c=>c.st==="Active");
   const disc=(DISCREPANCIES||[]);
-  const discGap=disc.reduce((s,d)=>s+d.gap,0);
+  const discGap=disc.reduce((s,d)=>s+(d.absGap||Math.abs(d.gap)),0);
   const top=[...active].sort((a,b)=>b.tot-a.tot).slice(0,5);
   const attn=active.map(c=>({c,a:getAct(c)})).filter(x=>x.a.u<=3).sort((a,b)=>a.a.u-b.a.u).slice(0,5);
   const moves=recommendedMoves().slice(0,5);
@@ -547,8 +548,8 @@ function renderInsights(){
   // 1) Data accuracy / discrepancies
   const discBody=(disc.length?`
     <div style="font-size:22px;font-weight:700;font-family:var(--mn);color:var(--rd);line-height:1">${disc.length}</div>
-    <div style="font-size:10px;color:var(--d);margin:2px 0 8px">chatters · ~${fI(discGap)} unaccounted this month</div>
-    ${disc.slice(0,4).map(d=>row(`${d.name} <span style="color:var(--d);font-size:10px">${d.team||''}</span>`,`<span style="color:var(--rd)">${d.pct.toFixed(0)}%</span> · gap ${fI(d.gap)}`,`openCh(${d.id})`)).join('')}
+    <div style="font-size:10px;color:var(--d);margin:2px 0 8px">chatters · ~${fI(discGap)} total mismatch this month</div>
+    ${disc.slice(0,4).map(d=>row(`${d.name} <span style="color:var(--d);font-size:10px">${d.team||''}</span>`,`<span style="color:${d.dir==='under'?'var(--rd)':'var(--am)'}">${fI(d.absGap)} ${d.dir}</span>`,`openCh(${d.id})`)).join('')}
     `:`<div style="font-size:12px;color:var(--gn);margin-bottom:8px">✓ Payroll & Sales Record reconcile this month</div>`)+
     `<button class="ns" style="margin-top:10px;width:100%" onclick="openDiscrepancies()">📅 View every month →</button>`;
 
@@ -1351,10 +1352,12 @@ async function syncSalesRecord(){
       c.lifeMonthlyAvg=ld.sales/(c.monthsActive||1);
       // Current month (for discrepancy + avg-ticket fallback)
       c.txSales=cm.sales;c.txCount=cm.count;
-      const rec=cm.sales;const gap=c.tot-rec;const pct=c.tot>0?(rec/c.tot*100):100;
-      if(c.tot>50&&(pct<90||gap>50))DISCREPANCIES.push({name:c.n,id:c.id,team:c.team,payroll:c.tot,record:rec,gap,pct});
+      const rec=cm.sales;const gap=c.tot-rec;const pct=c.tot>0?(rec/c.tot*100):(rec>0?200:100);
+      // Flag a mismatch in EITHER direction: logged under payroll (missing sales) OR over (lag/dupes)
+      if((c.tot>20||rec>20)&&Math.abs(gap)>20)
+        DISCREPANCIES.push({name:c.n,id:c.id,team:c.team,payroll:c.tot,record:rec,gap,absGap:Math.abs(gap),pct,dir:gap>0?'under':'over'});
     });
-    DISCREPANCIES.sort((a,b)=>b.gap-a.gap);
+    DISCREPANCIES.sort((a,b)=>b.absGap-a.absGap);
     enrich();
     console.log('[Slushy] Sales Record: lifetime for '+Object.keys(LIFE_DATA).length+' chatters; '+DISCREPANCIES.length+' '+curLabel+' discrepancies');
     return true;
