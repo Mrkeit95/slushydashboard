@@ -92,7 +92,7 @@ td{padding:9px 8px;white-space:nowrap}
 <div class="login-box" id="loginForm"><h2>Slushy Dashboard</h2><p>Operations Command Center</p><input class="li" id="lN" placeholder="Name" onkeydown="if(event.key==='Enter')doLogin()"><input class="li" id="lP" type="password" placeholder="Password" onkeydown="if(event.key==='Enter')doLogin()"><button class="lb" onclick="doLogin()">Sign In</button><div class="le" id="lE"></div></div></div>
 
 <div id="app" style="display:none"><div class="glow"></div><div class="wrap">
-<div class="hdr"><div class="logo"><svg width="30" height="30" viewBox="0 0 100 100" fill="none"><defs><linearGradient id="sg" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#FF6B35"/><stop offset="50%" stop-color="#FF3CAC"/><stop offset="100%" stop-color="#E91E8C"/></linearGradient></defs><path d="M50 5 L61 35 L95 35 L68 55 L78 90 L50 70 L22 90 L32 55 L5 35 L39 35 Z" fill="url(#sg)"/><path d="M38 48 Q50 38 62 48 Q62 62 50 70 Q38 62 38 48Z" fill="#110A0A"/></svg><span class="logo-t">Slushy Dashboard</span><span id="lS" style="display:flex;align-items:center;gap:6px;margin-left:12px;font-size:10px;color:var(--d)"><span class="ld"></span>Live</span></div><div class="hr"><div class="tabs" id="tbar"></div><div class="up" id="uP"></div><button class="lo" onclick="doLogout()">Sign Out</button></div></div>
+<div class="hdr"><div class="logo"><svg width="30" height="30" viewBox="0 0 100 100" fill="none"><defs><linearGradient id="sg" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#FF6B35"/><stop offset="50%" stop-color="#FF3CAC"/><stop offset="100%" stop-color="#E91E8C"/></linearGradient></defs><path d="M50 5 L61 35 L95 35 L68 55 L78 90 L50 70 L22 90 L32 55 L5 35 L39 35 Z" fill="url(#sg)"/><path d="M38 48 Q50 38 62 48 Q62 62 50 70 Q38 62 38 48Z" fill="#110A0A"/></svg><span class="logo-t">Slushy Dashboard</span><span id="lS" style="display:flex;align-items:center;gap:6px;margin-left:12px;font-size:10px;color:var(--d)"><span class="ld"></span>Live</span></div><div class="hr"><div class="tabs" id="tbar"></div><div class="up" id="uP"></div><button class="lo" id="syncBtn" onclick="manualSync()" style="border-color:rgba(0,229,155,0.4);color:var(--gn)">⟳ Sync</button><button class="lo" onclick="doLogout()">Sign Out</button></div></div>
 <div id="alerts"></div>
 <div id="t-overview" class="tc on"></div><div id="t-creators" class="tc"></div><div id="t-chatters" class="tc"></div><div id="t-pricing" class="tc"></div><div id="t-actions" class="tc"></div><div id="t-optimize" class="tc"></div><div id="t-tasks" class="tc"></div><div id="t-heatmap" class="tc"></div><div id="t-settings" class="tc"></div>
 </div></div>
@@ -665,10 +665,10 @@ function render(){
   let crList=[...CR];if(crFilter!=="all")crList=crList.filter(c=>c.t===crFilter);
   document.getElementById('t-creators').innerHTML=`
     <div style="display:flex;gap:8px;margin-bottom:16px;align-items:center;flex-wrap:wrap"><span class="lbl">${getCurMonthLabel()} Models (${CR.length})</span>
-    <select class="fsel" onchange="crFilter=this.value;render()"><option value="all">All Teams</option>${["Team 1","Team 2","Team 3","Team 4","Team 5","Team 6","Team 7"].map(t=>`<option value="${t}" ${crFilter===t?"selected":""}>${t}</option>`).join('')}</select>
-    <span style="font-size:11px;color:var(--d);margin-left:auto">${crList.length} creators · Click team name for full breakdown</span></div>
-    <div class="tw"><table><thead><tr><th>#</th><th>Model</th><th>Team</th><th class="s" onclick="doSort('sales')">Running Sales</th><th>Projections</th><th>MoM%</th><th>Sales</th><th>Follows</th><th>Type</th></tr></thead><tbody>
-      ${crList.sort((a,b)=>b.sales-a.sales).map((c,i)=>{const momCol=c.mom>0?'var(--gn)':c.mom<0?'var(--rd)':'var(--m)';return`<tr onclick="openTeam('${c.t}')"><td style="font-family:var(--mn);color:var(--d);font-size:10px">${i+1}</td><td style="font-weight:600">${c.n}</td><td><span style="color:${TC[c.t]||'var(--d)'};font-weight:600">${c.t||'—'}</span></td><td style="font-family:var(--mn);font-weight:700">${fmt(c.sales)}</td><td style="font-family:var(--mn);font-size:11px">${fmt(c.proj)}</td><td style="font-family:var(--mn);font-size:11px;color:${momCol}">${(c.mom*100).toFixed(1)}%</td><td style="font-family:var(--mn);font-size:11px">${c.count}</td><td style="font-family:var(--mn);font-size:11px">${c.follows.toLocaleString()}</td><td><span class="badge b-${c.accType==='FULL'?'star':'watch'}">${c.accType||'—'}</span></td></tr>`}).join('')}
+    <select class="fsel" onchange="crFilter=this.value;render()"><option value="all">All Teams</option>${allTeams().map(t=>`<option value="${t}" ${crFilter===t?"selected":""}>${t}</option>`).join('')}</select>
+    <span style="font-size:11px;color:var(--d);margin-left:auto">${crList.length} of ${CR.length} models · Click team for breakdown</span></div>
+    <div class="tw"><table><thead><tr><th>#</th><th>Model / Page</th><th>Team</th><th class="s" onclick="doSort('sales')">Total Sales</th><th>Projection</th><th>Goal</th><th>Goal %ile</th><th>Allocation</th><th>MoM%</th><th>Type</th></tr></thead><tbody>
+      ${crList.sort((a,b)=>b.sales-a.sales).map((c,i)=>{const momCol=c.mom>0?'var(--gn)':c.mom<0?'var(--rd)':'var(--m)';const pc=c.percentile>=80?'var(--gn)':c.percentile>=40?'var(--am)':'var(--rd)';return`<tr onclick="openTeam('${c.t}')"><td style="font-family:var(--mn);color:var(--d);font-size:10px">${c.rank||i+1}</td><td style="font-weight:600">${c.n}</td><td><span style="color:${teamColor(c.t)};font-weight:600">${c.t||'—'}</span></td><td style="font-family:var(--mn);font-weight:700">${fmt(c.sales)}</td><td style="font-family:var(--mn);font-size:11px">${fmt(c.proj)}</td><td style="font-family:var(--mn);font-size:11px;color:var(--d)">${fmt(c.g)}</td><td style="font-family:var(--mn);font-size:11px;color:${pc}">${(c.percentile||0).toFixed(0)}%</td><td style="font-family:var(--mn);font-size:11px">${(c.allocation||0).toFixed(2)}%</td><td style="font-family:var(--mn);font-size:11px;color:${momCol}">${c.mom?(c.mom*100).toFixed(0)+'%':'—'}</td><td><span class="badge b-${c.accType==='FULL'?'star':'watch'}">${c.accType||'—'}</span></td></tr>`}).join('')}
     </tbody></table></div>
   `;
 
@@ -1215,39 +1215,49 @@ async function resolveModelTab(){
 /* ── Build Creators/models from the resolved monthly breakdown tab ── */
 async function syncSalesData(){
   try{
-    const res=await resolveModelTab();
-    if(!res){console.log('[Slushy] No monthly model tab found');return false}
-    const {rows,hdrIdx,label}=res;
-    crMonthLabel=label;
+    // PRIMARY source = "Page Analysis" Model Monthly Ranking (the full ~96-page list).
+    // cols: 26=Rank,27=Model/Page,28=Total Sales,29=Projection,30=Goal,31=Goal Percentile,32=Sale Allocation
+    const paResp=await fetch(SALES_SHEET_BASE+encodeURIComponent('Page Analysis'));
+    let paRows=[];if(paResp.ok)paRows=parseCSV(await paResp.text());
+    let paHdr=-1;
+    for(let i=0;i<Math.min(paRows.length,15);i++){if((paRows[i]||[])[27]&&paRows[i][27].toString().trim()==='Model/Page'){paHdr=i;break}}
 
-    // Model columns: 9=Rank,10=Model,11=StartDate,12=AccountType,13=RunningSales,
-    // 14=Projection,15=MoM%,16=SaleCount,17=Follows,18=Visits. Data starts at hdrIdx+1.
+    // Enrichment from the monthly breakdown tab (MoM%, sale count, follows, visits, account type)
+    const extras={};const res=await resolveModelTab();
+    if(res){crMonthLabel=res.label;const mr=res.rows;
+      for(let i=res.hdrIdx+1;i<mr.length;i++){const r=mr[i];if(!r)continue;const m=(r[10]||'').toString().trim();
+        if(!m||m.length<2||/top 20/i.test(m))continue;
+        extras[normName(m)]={mom:parseNum(r[15])/100,count:parseInt((r[16]||'').toString().replace(/[^0-9-]/g,''))||0,follows:parseInt((r[17]||'').toString().replace(/[^0-9-]/g,''))||0,visits:parseInt((r[18]||'').toString().replace(/[^0-9-]/g,''))||0,accType:(r[12]||'').toString().trim(),startDate:(r[11]||'').toString().trim()};}}
+    if(!crMonthLabel)crMonthLabel=MONTHS[currentMonth]+' '+currentYear;
+
     CR.length=0;
-    for(let i=hdrIdx+1;i<rows.length;i++){
-      const r=rows[i];if(!r)continue;
-      const model=(r[10]||'').toString().trim();
-      if(!model||model.length<2)continue;
-      if(model.toLowerCase().includes('top 20'))continue;
-      const sales=parseNum((r[13]||'').toString());
-      const proj=parseNum((r[14]||'').toString());
-      const mom=parseNum((r[15]||'').toString())/100; // sheet stores e.g. 56.21(%) -> 0.5621
-      const rank=parseInt(r[9])||(i-hdrIdx);
-      const count=parseInt((r[16]||'').toString().replace(/[^0-9-]/g,''))||0;
-      const follows=parseInt((r[17]||'').toString().replace(/[^0-9-]/g,''))||0;
-      const visits=parseInt((r[18]||'').toString().replace(/[^0-9-]/g,''))||0;
-      const accType=(r[12]||'').toString().trim();
-      const startDate=(r[11]||'').toString().trim();
-      CR.push({
-        id:model.toLowerCase().replace(/\s+/g,''),
-        n:model,t:'',g:0,
-        rank,sales,proj,mom,count,follows,visits,accType,startDate,daily:[]
-      });
+    if(paHdr>=0){
+      for(let i=paHdr+1;i<paRows.length;i++){
+        const r=paRows[i];if(!r)continue;
+        const rank=parseInt((r[26]||'').toString().replace(/[^0-9]/g,''));
+        const name=(r[27]||'').toString().trim();
+        if(!name||name.length<2||!rank)continue;
+        const ex=extras[normName(name)]||{};
+        CR.push({
+          id:name.toLowerCase().replace(/\s+/g,''),n:name,t:'',g:parseNum(r[30]),
+          rank,sales:parseNum(r[28]),proj:parseNum(r[29]),
+          percentile:parseNum(r[31]),allocation:parseNum(r[32]),
+          mom:ex.mom||0,count:ex.count||0,follows:ex.follows||0,visits:ex.visits||0,
+          accType:ex.accType||'',startDate:ex.startDate||'',daily:[]
+        });
+      }
+    }else if(res){
+      // Fallback: Page Analysis unavailable -> use the breakdown tab directly
+      const mr=res.rows;
+      for(let i=res.hdrIdx+1;i<mr.length;i++){const r=mr[i];if(!r)continue;const m=(r[10]||'').toString().trim();
+        if(!m||m.length<2||/top 20/i.test(m))continue;
+        CR.push({id:m.toLowerCase().replace(/\s+/g,''),n:m,t:'',g:0,rank:parseInt(r[9])||(i-res.hdrIdx),sales:parseNum(r[13]),proj:parseNum(r[14]),mom:parseNum(r[15])/100,count:parseInt(r[16])||0,follows:parseInt(r[17])||0,visits:parseInt(r[18])||0,accType:(r[12]||'').toString().trim(),daily:[]});}
     }
 
     await syncReferenceData();
     rebuildTeamGoals();
-    console.log('[Slushy] Creators from "'+label+'": '+CR.length+' models. Top: '+(CR[0]?CR[0].n+' $'+CR[0].sales:'none'));
-    return true;
+    console.log('[Slushy] Creators: '+CR.length+' models ('+(paHdr>=0?'Page Analysis':'breakdown')+'). Top: '+(CR[0]?CR[0].n+' $'+CR[0].sales:'none'));
+    return CR.length>0;
   }catch(e){console.log('[Slushy] syncSalesData error:',e.message);return false}
 }
 
@@ -1292,7 +1302,7 @@ async function syncReferenceData(){
       const ref=refMap[key]||refMap[c.n.toLowerCase()];
       if(ref){
         c.t=ref.team||c.t;
-        c.g=ref.goal||c.g;
+        if(!c.g)c.g=ref.goal; // keep Page Analysis goal as primary
         c.status=ref.status||'Active';
       }
     });
@@ -1628,6 +1638,18 @@ async function switchMonth(m){
   await doSync();
 }
 
+// Manual, immediate refresh from the Sync button (top-right)
+var syncing=false;
+async function manualSync(){
+  if(syncing)return;syncing=true;
+  const b=document.getElementById('syncBtn');
+  if(b){b.disabled=true;b.style.opacity='0.6';b.innerHTML='⟳ Syncing…'}
+  const ok=await doSync().catch(()=>false);
+  if(b){b.disabled=false;b.style.opacity='1';b.innerHTML='⟳ Sync'}
+  syncing=false;
+  toast(ok?'✓ Data updated':'Sync had an issue — try again');
+}
+
 function init(){
 const errs=[];
 try{
@@ -1641,7 +1663,7 @@ pullStore().finally(()=>{
     document.getElementById('t-overview').innerHTML='<div style="padding:40px"><h2 style="color:#FF3B5C;margin-bottom:12px">Dashboard Error</h2><pre style="color:#8899AA;white-space:pre-wrap;font-size:13px;line-height:1.6;background:rgba(255,255,255,0.03);padding:20px;border-radius:12px">'+errs.join('\n\n')+'</pre></div>';
   }
   doSync();
-  setInterval(doSync, 60000);
+  setInterval(doSync, 900000); // auto-refresh every 15 minutes
 });
 }
 

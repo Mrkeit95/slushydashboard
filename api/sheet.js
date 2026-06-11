@@ -19,7 +19,7 @@ export default async function handler(req, res) {
     if (!r.ok) return res.status(502).json({ error: "Sheet fetch failed" });
     const csv = await r.text();
     res.setHeader("Content-Type", "text/csv");
-    res.setHeader("Cache-Control", "public, max-age=300");
+    res.setHeader("Cache-Control", "no-store, max-age=0"); // always fresh (Sync button + 15-min refresh)
     res.setHeader("Access-Control-Allow-Origin", "*");
     res.status(200).send(csv);
   } catch (e) { res.status(500).json({ error: e.message }); }
