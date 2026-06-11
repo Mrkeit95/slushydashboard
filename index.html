@@ -493,7 +493,10 @@ function openCh(id){
     <div style="margin-bottom:20px"><div class="lbl" style="margin-bottom:10px">Performance</div><div class="pg">
       ${[{l:MONTHS[currentMonth]+" So Far",v:fmt(c.tot)},{l:"Projected "+MONTHS[currentMonth],v:fmt(c.projMonth),cl:c.projVsGoal>=100?'var(--gn)':c.projVsGoal>=70?'var(--am)':'var(--rd)'},{l:"Goal",v:fmt(c.goal)},{l:"Proj vs Goal",v:c.projVsGoal.toFixed(0)+"%",cl:c.projVsGoal>=100?'var(--gn)':c.projVsGoal>=70?'var(--am)':'var(--rd)'},{l:"Avg Ticket*",v:fmt(c.avgTicket),cl:c.avgTicket>=40?'var(--gn)':c.avgTicket<25&&c.avgTicket>0?'var(--rd)':''},{l:"Daily Avg",v:fmt(c.dailyAvg)},{l:"Momentum",v:(mom>0?'+':'')+mom+'%',cl:c.momentum>=1?'var(--gn)':c.momentum<0.7?'var(--rd)':''},{l:"Team / Shift",v:c.team+' · '+c.shift},{l:"Pace to Goal",v:c.pctGoal.toFixed(0)+"%",cl:c.pctGoal>=80?'var(--gn)':c.pctGoal>=50?'var(--am)':'var(--rd)'}].map(x=>`<div class="ps"><div class="dl">${x.l}</div><div class="dv"${x.cl?' style="color:'+x.cl+'"':''}>${x.v}</div></div>`).join('')}
     </div></div>
-    ${c.daily&&c.daily.length?`<div style="margin-bottom:20px"><div class="lbl" style="margin-bottom:8px">Daily (Mar 1–6)</div><div style="display:flex;gap:6px;flex-wrap:wrap">${c.daily.map((v,i)=>`<div style="padding:7px 12px;border-radius:8px;background:var(--s1);border:1px solid var(--b1);text-align:center;flex:1;min-width:65px"><div style="font-size:9px;color:var(--d)">Mar ${i+1}</div><div style="font-size:13px;font-weight:700;font-family:var(--mn);color:${v>0?'var(--t)':'var(--f)'}">${v>0?fmt(v):'—'}</div></div>`).join('')}</div></div>`:''}
+    <div style="margin-bottom:20px"><div class="lbl" style="margin-bottom:8px">Lifetime — all months on record (${c.monthsActive||1} mo)</div><div class="pg">
+      ${[{l:"Lifetime Sales",v:fK(c.lifeSales||0)},{l:"Avg / Month",v:fmt(c.lifeMonthlyAvg||0),cl:(c.lifeMonthlyAvg||0)>=4500?'var(--gn)':(c.lifeMonthlyAvg||0)<2000?'var(--rd)':'var(--am)'},{l:"Lifetime Ticket",v:fmt(c.lifeAvgTicket||0),cl:(c.lifeAvgTicket||0)<25&&(c.lifeAvgTicket||0)>0?'var(--rd)':''}].map(x=>`<div class="ps"><div class="dl">${x.l}</div><div class="dv"${x.cl?' style="color:'+x.cl+'"':''}>${x.v}</div></div>`).join('')}
+    </div></div>
+    ${c.daily&&c.daily.length?`<div style="margin-bottom:20px"><div class="lbl" style="margin-bottom:8px">Daily (${MONTH_SHORT[currentMonth]})</div><div style="display:flex;gap:6px;flex-wrap:wrap">${c.daily.map((v,i)=>`<div style="padding:7px 12px;border-radius:8px;background:var(--s1);border:1px solid var(--b1);text-align:center;flex:1;min-width:65px"><div style="font-size:9px;color:var(--d)">${MONTH_SHORT[currentMonth]} ${i+1}</div><div style="font-size:13px;font-weight:700;font-family:var(--mn);color:${v>0?'var(--t)':'var(--f)'}">${v>0?fmt(v):'—'}</div></div>`).join('')}</div></div>`:''}
     <div style="margin-bottom:16px"><div class="lbl" style="margin-bottom:8px">Actions</div><div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px">
       <button class="abtn a-note" onclick="document.getElementById('ni${id}').focus()">📝 Note</button>
       <button class="abtn a-coach" onclick="saveActn(${id},'Coaching','Assigned');addTask('Coach ${c.n} — upselling training','high',${id})">📋 Coach</button>
@@ -1347,66 +1350,56 @@ async function syncPrevMonth(){
   }catch(e){console.log('Prev month sync error:',e.message)}
 }
 
-/* ── Sales Record = raw transaction log (current month). It is INCOMPLETE (~60% captured),
-   so we use it only for (a) per-sale avg ticket estimate and (b) discrepancy detection vs
-   the authoritative Payroll totals. ── */
+/* ── Sales Record = full transaction log back to late 2025. We split it into:
+   • lifetime per chatter (all months) → lifeSales / lifeMonthlyAvg / monthsActive / lifeAvgTicket
+   • current month only → for the Payroll-vs-record discrepancy check + avg-ticket fallback ── */
 var LIFE_DATA={}; // {chatterName: {sales, count, months}}
 var DISCREPANCIES=[]; // [{name, payroll, record, gap, pct}]
 
 async function syncSalesRecord(){
   try{
-    const url='/api/sheet?sid=slushy&sheet='+encodeURIComponent('Sales Record');
-    const resp=await fetch(url);
+    const resp=await fetch('/api/sheet?sid=slushy&sheet='+encodeURIComponent('Sales Record'));
     if(!resp.ok)return false;
-    const csv=await resp.text();
-    const rows=parseCSV(csv);
-    
-    // Find header
+    const rows=parseCSV(await resp.text());
+
     let hdr=-1;
     for(let i=0;i<Math.min(rows.length,5);i++){
       if((rows[i]||[]).some(c=>(c||'').includes('Chatter Name'))){hdr=i;break}
     }
     if(hdr<0)return false;
-
     const h=rows[hdr];
-    // Headers are verbose (e.g. "Net Sales DO NOT TOUCH") — match by substring
     const iName=h.findIndex(c=>(c||'').includes('Chatter Name'));
     const iNet=h.findIndex(c=>(c||'').includes('Net Sales'));
     const iMonth=h.findIndex(c=>(c||'').includes('Month Value'));
-
     if(iName<0||iNet<0)return false;
-    
-    LIFE_DATA={};
+    const curLabel=MONTHS[currentMonth]+' '+currentYear;
+
+    LIFE_DATA={};const cur={};
     for(let i=hdr+1;i<rows.length;i++){
-      const r=rows[i];
-      const name=(r[iName]||'').trim();
+      const r=rows[i];const name=(r[iName]||'').trim();
       if(!name||name.length<2)continue;
-      const net=parseNum(r[iNet]);
-      const month=iMonth>=0?(r[iMonth]||'').trim():'';
-      
+      const net=parseNum(r[iNet]);const month=iMonth>=0?(r[iMonth]||'').trim():'';
       if(!LIFE_DATA[name])LIFE_DATA[name]={sales:0,count:0,months:{}};
-      LIFE_DATA[name].sales+=net;
-      LIFE_DATA[name].count++;
-      if(month)LIFE_DATA[name].months[month]=true;
+      LIFE_DATA[name].sales+=net;LIFE_DATA[name].count++;if(month)LIFE_DATA[name].months[month]=true;
+      if(month===curLabel){if(!cur[name])cur[name]={sales:0,count:0};cur[name].sales+=net;cur[name].count++;}
     }
-    
-    // Apply transaction-level data (avg ticket) + compute discrepancy vs Payroll total
+
     DISCREPANCIES=[];
     D.forEach(c=>{
-      const ld=LIFE_DATA[c.n];
-      c.txSales=ld?ld.sales:0;
-      c.txCount=ld?ld.count:0;
-      const rec=ld?ld.sales:0;
-      const gap=c.tot-rec; // Payroll minus what the transaction log captured
-      const pct=c.tot>0?(rec/c.tot*100):100;
-      // Flag meaningful mismatches on chatters who actually have payroll sales
-      if(c.tot>50&&(pct<90||gap>50)){
-        DISCREPANCIES.push({name:c.n,id:c.id,team:c.team,payroll:c.tot,record:rec,gap,pct});
-      }
+      const ld=LIFE_DATA[c.n]||{sales:0,count:0,months:{}};
+      const cm=cur[c.n]||{sales:0,count:0};
+      // Lifetime (all months in the record)
+      c.lifeSales=ld.sales;c.lifeCount=ld.count;c.monthsActive=Object.keys(ld.months).length||1;
+      c.lifeAvgTicket=ld.count>0?ld.sales/ld.count:0;
+      c.lifeMonthlyAvg=ld.sales/(c.monthsActive||1);
+      // Current month (for discrepancy + avg-ticket fallback)
+      c.txSales=cm.sales;c.txCount=cm.count;
+      const rec=cm.sales;const gap=c.tot-rec;const pct=c.tot>0?(rec/c.tot*100):100;
+      if(c.tot>50&&(pct<90||gap>50))DISCREPANCIES.push({name:c.n,id:c.id,team:c.team,payroll:c.tot,record:rec,gap,pct});
     });
     DISCREPANCIES.sort((a,b)=>b.gap-a.gap);
     enrich();
-    console.log('[Slushy] Sales Record: '+Object.keys(LIFE_DATA).length+' chatters; '+DISCREPANCIES.length+' discrepancies flagged');
+    console.log('[Slushy] Sales Record: lifetime for '+Object.keys(LIFE_DATA).length+' chatters; '+DISCREPANCIES.length+' '+curLabel+' discrepancies');
     return true;
   }catch(e){console.log('Sales Record sync error:',e.message);return false}
 }
@@ -1538,6 +1531,7 @@ async function syncChatterData(){
       const payStatus=(r[iStatus]||'').toString().trim();
       let st=hr.status||payStatus||'Active';
       if(/ztp/i.test(hr.status)||/ztp/i.test(payStatus))st='ZTP';
+      if(st==='ZTP')continue; // offboarded — remove from the dashboard entirely
       const tenure=monthsSince(hr.startDate);
       freshD.push({
         id:id++,n:name,
